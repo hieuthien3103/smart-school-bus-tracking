@@ -35,11 +35,14 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     temperature: 92
   });
 
+  // Trip mode: 'pickup' (đón học sinh) hoặc 'dropoff' (trả học sinh)
+  const [tripMode, setTripMode] = useState<'pickup' | 'dropoff'>('pickup');
+
   const [students, setStudents] = useState([
-    { id: 1, name: 'Nguyễn Minh An', pickup: '07:15', status: 'waiting', phone: '0901234567' },
-    { id: 2, name: 'Trần Thị Bình', pickup: '07:20', status: 'picked', phone: '0907654321' },
-    { id: 3, name: 'Lê Văn Cường', pickup: '07:25', status: 'waiting', phone: '0909876543' },
-    { id: 4, name: 'Phạm Minh Đức', pickup: '07:30', status: 'absent', phone: '0903456789' }
+    { id: 1, name: 'Nguyễn Minh An', pickup: '07:15', dropoff: '16:30', pickupAddress: 'Ngã tư Láng Hạ', dropoffAddress: '123 Đường ABC', status: 'waiting', phone: '0901234567' },
+    { id: 2, name: 'Trần Thị Bình', pickup: '07:20', dropoff: '16:35', pickupAddress: 'Bưu điện Đống Đa', dropoffAddress: '456 Đường DEF', status: 'picked', phone: '0907654321' },
+    { id: 3, name: 'Lê Văn Cường', pickup: '07:25', dropoff: '16:40', pickupAddress: 'Trường THCS XYZ', dropoffAddress: '789 Đường GHI', status: 'waiting', phone: '0909876543' },
+    { id: 4, name: 'Phạm Minh Đức', pickup: '07:30', dropoff: '16:45', pickupAddress: 'Chợ Hôm', dropoffAddress: '101 Đường JKL', status: 'absent', phone: '0903456789' }
   ]);
 
   const [routeInfo] = useState({
@@ -70,7 +73,7 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStudentStatus = (studentId: number, newStatus: 'picked' | 'absent') => {
+  const handleStudentStatus = (studentId: number, newStatus: 'picked' | 'absent' | 'dropped') => {
     setStudents(prev => 
       prev.map(student => 
         student.id === studentId 
@@ -87,6 +90,7 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'picked': return 'text-green-600 bg-green-100';
+      case 'dropped': return 'text-blue-600 bg-blue-100';
       case 'waiting': return 'text-yellow-600 bg-yellow-100';
       case 'absent': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -96,7 +100,8 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'picked': return 'Đã đón';
-      case 'waiting': return 'Chờ đón';
+      case 'dropped': return 'Đã trả';
+      case 'waiting': return tripMode === 'pickup' ? 'Chờ đón' : 'Chờ trả';
       case 'absent': return 'Vắng mặt';
       default: return 'Không xác định';
     }
@@ -106,10 +111,38 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Dashboard Tài xế - {driverData.name}
-        </h1>
-        <p className="text-gray-600">Tuyến {driverData.route} - Xe buýt #{driverData.busId}</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Dashboard Tài xế - {driverData.name}
+            </h1>
+            <p className="text-gray-600">Tuyến {driverData.route} - Xe buýt #{driverData.busId}</p>
+          </div>
+          
+          {/* Trip Mode Selector */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setTripMode('pickup')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                tripMode === 'pickup' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🚌 Đón học sinh
+            </button>
+            <button
+              onClick={() => setTripMode('dropoff')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                tripMode === 'dropoff' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🏠 Trả học sinh
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -129,13 +162,18 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
 
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <Users className="h-6 w-6 text-green-600" />
+            <div className={`p-3 rounded-lg ${tripMode === 'pickup' ? 'bg-green-100' : 'bg-blue-100'}`}>
+              <Users className={`h-6 w-6 ${tripMode === 'pickup' ? 'text-green-600' : 'text-blue-600'}`} />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-600">Học sinh đã đón</p>
+              <p className="text-sm text-gray-600">
+                {tripMode === 'pickup' ? 'Học sinh đã đón' : 'Học sinh đã trả'}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
-                {students.filter(s => s.status === 'picked').length}
+                {tripMode === 'pickup' 
+                  ? students.filter(s => s.status === 'picked').length
+                  : students.filter(s => s.status === 'dropped').length
+                }
               </p>
               <p className="text-sm text-gray-500">/ {students.length}</p>
             </div>
@@ -229,7 +267,7 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Users className="h-5 w-5 text-green-600 mr-2" />
-            Danh sách Học sinh
+            {tripMode === 'pickup' ? 'Danh sách Đón học sinh' : 'Danh sách Trả học sinh'}
           </h2>
           
           <div className="space-y-3">
@@ -238,7 +276,12 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <h3 className="font-medium text-gray-900">{student.name}</h3>
-                    <p className="text-sm text-gray-500">Đón lúc: {student.pickup}</p>
+                    <p className="text-sm text-gray-500">
+                      {tripMode === 'pickup' ? `Đón lúc: ${student.pickup}` : `Trả lúc: ${student.dropoff}`}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      📍 {tripMode === 'pickup' ? student.pickupAddress : student.dropoffAddress}
+                    </p>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.status)}`}>
                     {getStatusText(student.status)}
@@ -251,7 +294,8 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
                     {student.phone}
                   </div>
                   
-                  {student.status === 'waiting' && (
+                  {/* Pickup Mode Buttons */}
+                  {tripMode === 'pickup' && student.status === 'waiting' && (
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleStudentStatus(student.id, 'picked')}
@@ -264,6 +308,24 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
                         className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs hover:bg-red-200 transition-colors"
                       >
                         Vắng mặt
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Dropoff Mode Buttons */}
+                  {tripMode === 'dropoff' && student.status === 'picked' && (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleStudentStatus(student.id, 'dropped')}
+                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs hover:bg-blue-200 transition-colors"
+                      >
+                        Đã trả
+                      </button>
+                      <button
+                        onClick={() => handleStudentStatus(student.id, 'absent')}
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs hover:bg-red-200 transition-colors"
+                      >
+                        Không có mặt
                       </button>
                     </div>
                   )}
