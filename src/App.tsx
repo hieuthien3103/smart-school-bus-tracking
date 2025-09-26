@@ -249,7 +249,7 @@ const App = () => {
           />
         );
       case 'tracking':
-        return <LocationTracking />;
+        return <LocationTracking key="location-tracking-stable" />;
       case 'notifications':
         return <NotificationCenter />;
       case 'reports':
@@ -332,7 +332,7 @@ const App = () => {
 
     switch (userType) {
       case 'admin':
-        return <AdminApp />;
+        return AdminApp;
       case 'parent':
         return <ParentApp />;
       case 'driver':
@@ -342,8 +342,8 @@ const App = () => {
     }
   };
 
-  // Admin App Component (Full management system)
-  const AdminApp = () => (
+  // Admin App Component (Full management system) - memoized to prevent re-renders
+  const AdminApp = useMemo(() => (
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar 
         sidebarOpen={sidebarOpen}
@@ -378,7 +378,7 @@ const App = () => {
         />
       </Modal>
     </div>
-  );
+  ), [sidebarOpen, activeTab, user, renderAdminContent, showModal, getModalTitle, getFormFields, handleFormSubmit, editingItem]);
 
   // Parent App Component (Simplified parent view)
   const ParentApp = () => (

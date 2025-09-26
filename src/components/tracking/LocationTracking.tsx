@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { MapPin, Navigation, Clock, Users, Bus, RefreshCw, Filter, Eye, AlertTriangle, Search, X } from 'lucide-react';
 
 interface BusLocation {
@@ -20,9 +20,16 @@ interface BusLocation {
 }
 
 const LocationTracking = () => {
+  console.log('🔄 LocationTracking component mounted/re-rendered');
+  
   const [selectedBus, setSelectedBus] = useState<number | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Debug: Monitor filterStatus changes
+  useEffect(() => {
+    console.log(`🔍 FilterStatus changed to: "${filterStatus}"`);
+  }, [filterStatus]);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<BusLocation[]>([]);
@@ -83,22 +90,37 @@ const LocationTracking = () => {
     }
   ]);
 
-  // Simulate real-time updates
+  // Giữ selectedBus khi busLocations cập nhật, chỉ reset nếu bus không còn
+  useEffect(() => {
+    if (selectedBus !== null) {
+      const stillExists = busLocations.some(bus => bus.id === selectedBus);
+      // Chỉ log khi selection thực sự bị reset, không log liên tục
+      if (!stillExists) {
+        console.log(`❌ Bus ${selectedBus} not found, clearing selection`);
+        setSelectedBus(null);
+      }
+    }
+  }, [busLocations, selectedBus]);
+
+  // Simulate real-time updates (only random lat, lng, speed, lastUpdate; DO NOT random status)
+  const updateBusLocations = useCallback(() => {
+    // Tắt auto-refresh logging để ngăn spam console
+    setBusLocations(prev => prev.map(bus => ({
+      ...bus,
+      lat: bus.lat + (Math.random() - 0.5) * 0.001,
+      lng: bus.lng + (Math.random() - 0.5) * 0.001,
+      speed: Math.max(0, bus.speed + (Math.random() - 0.5) * 10),
+      lastUpdate: 'Vừa cập nhật',
+      // status: bus.status // QUAN TRỌNG: giữ nguyên status, không random lại để filter hoạt động ổn định
+    })));
+  }, []);
+
   useEffect(() => {
     if (!isAutoRefresh) return;
 
-    const interval = setInterval(() => {
-      setBusLocations(prev => prev.map(bus => ({
-        ...bus,
-        lat: bus.lat + (Math.random() - 0.5) * 0.001,
-        lng: bus.lng + (Math.random() - 0.5) * 0.001,
-        speed: Math.max(0, bus.speed + (Math.random() - 0.5) * 10),
-        lastUpdate: 'Vừa cập nhật'
-      })));
-    }, 5000);
-
+    const interval = setInterval(updateBusLocations, 5000);
     return () => clearInterval(interval);
-  }, [isAutoRefresh]);
+  }, [isAutoRefresh, updateBusLocations]);
 
   // Search functionality
   useEffect(() => {
@@ -118,18 +140,18 @@ const LocationTracking = () => {
     setShowSearchDropdown(filtered.length > 0);
   }, [searchQuery, busLocations]);
 
-  const handleSearchSelect = (bus: BusLocation) => {
+  const handleSearchSelect = useCallback((bus: BusLocation) => {
     setSelectedBus(bus.id);
     setSearchQuery('');
     setShowSearchDropdown(false);
-  };
+  }, []);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchQuery('');
     setShowSearchDropdown(false);
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status.toLowerCase()) {
       case 'đang di chuyển':
         return 'text-green-600 bg-green-100 border-green-200';
@@ -142,12 +164,16 @@ const LocationTracking = () => {
       default:
         return 'text-gray-600 bg-gray-100 border-gray-200';
     }
-  };
+  }, []);
 
-  const filteredBuses = busLocations.filter(bus => {
-    if (filterStatus === 'all') return true;
-    return bus.status.toLowerCase().includes(filterStatus.toLowerCase());
-  });
+  const filteredBuses = useMemo(() => {
+    const filtered = busLocations.filter(bus => {
+      if (filterStatus === 'all') return true;
+      return bus.status.toLowerCase().includes(filterStatus.toLowerCase());
+    });
+    // Chỉ log khi filter thực sự thay đổi, không log liên tục
+    return filtered;
+  }, [busLocations, filterStatus]);
 
   const MapView = () => (
     <div className="relative bg-gradient-to-br from-blue-50 to-green-50 rounded-xl h-96 overflow-hidden border-2 border-dashed border-gray-300">
@@ -164,18 +190,19 @@ const LocationTracking = () => {
       {/* Mock bus markers */}
       {filteredBuses.map((bus, index) => {
         const isSearched = searchResults.some(result => result.id === bus.id) && searchQuery.trim() !== '';
+        // Tính toán vị trí marker
+        const left = 20 + index * 25;
+        const top = 30 + index * 20;
         return (
           <div
             key={bus.id}
-            className={`absolute w-6 h-6 rounded-full border-2 shadow-lg cursor-pointer transform -translate-x-3 -translate-y-3 transition-all hover:scale-125 ${
+            className={`marker-bus absolute w-6 h-6 rounded-full border-2 shadow-lg cursor-pointer transform -translate-x-3 -translate-y-3 transition-all hover:scale-125 ${
               selectedBus === bus.id ? 'ring-4 ring-blue-300' : ''
             } ${
               isSearched ? 'bg-red-500 border-red-200 ring-2 ring-red-300 scale-125' : 'bg-blue-600 border-white'
             }`}
-            style={{
-              left: `${20 + index * 25}%`,
-              top: `${30 + index * 20}%`
-            }}
+            data-left={left}
+            data-top={top}
             onClick={() => setSelectedBus(selectedBus === bus.id ? null : bus.id)}
             title={`${bus.busNumber} - ${bus.route}${isSearched ? ' (Tìm kiếm)' : ''}`}
           >
@@ -340,7 +367,13 @@ const LocationTracking = () => {
           {['all', 'đang di chuyển', 'dừng đón khách', 'sự cố'].map((status) => (
             <button
               key={status}
-              onClick={() => setFilterStatus(status)}
+              onClick={() => {
+                // Chỉ log khi filter thật sự thay đổi
+                if (filterStatus !== status) {
+                  console.log(`🎯 Filter changed from "${filterStatus}" to "${status}"`);
+                }
+                setFilterStatus(status);
+              }}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 filterStatus === status
                   ? 'bg-blue-100 text-blue-700 border border-blue-200'
