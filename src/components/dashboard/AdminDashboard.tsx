@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   BarChart3, 
   Users, 
@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Clock
 } from 'lucide-react';
+import { useAppData } from '../../contexts/AppDataContext';
 
 interface AdminDashboardProps {
   adminData: {
@@ -20,14 +21,23 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
-  const [dashboardStats, setDashboardStats] = useState({
-    totalBuses: 12,
-    activeBuses: 9,
-    totalStudents: 245,
-    totalDrivers: 15,
-    activeRoutes: 8,
-    totalAlerts: 3
-  });
+  // Get real data from context
+  const { busLocations, scheduleData, driversData } = useAppData();
+  
+  // Calculate real-time stats from actual data with useMemo for proper re-rendering
+  const dashboardStats = useMemo(() => ({
+    totalBuses: busLocations.length,
+    activeBuses: busLocations.filter(bus => bus.status === 'Đang di chuyển').length,
+    // Calculate total students from ALL schedules (not bus locations) 
+    // because one bus can have multiple schedules
+    totalStudents: scheduleData.reduce((sum, schedule) => sum + schedule.students, 0),
+    totalDrivers: driversData.length,
+    totalRoutes: scheduleData.length, // Total number of routes/schedules
+    activeRoutes: scheduleData.filter(s => s.status === 'Hoạt động').length,
+    totalAlerts: busLocations.filter(bus => bus.status === 'Sự cố').length
+  }), [busLocations, scheduleData, driversData]);
+
+
 
   const [recentActivities] = useState([
     { id: 1, type: 'bus', message: 'Xe BS001 đã hoàn thành tuyến A1', time: '2 phút trước', status: 'success' },
@@ -42,18 +52,7 @@ const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
     { id: 3, type: 'emergency', message: 'Sự cố nhỏ tại điểm đón số 5', severity: 'high', route: 'Tuyến A3' }
   ]);
 
-  // Real-time updates simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDashboardStats(prev => ({
-        ...prev,
-        activeBuses: Math.floor(Math.random() * 3) + 8, // 8-10 active buses
-        totalAlerts: Math.floor(Math.random() * 5) + 1  // 1-5 alerts
-      }));
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Real-time stats are now calculated directly from context data
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -133,7 +132,7 @@ const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
               <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalStudents}</p>
               <p className="text-sm text-blue-600 flex items-center mt-1">
                 <Users className="h-3 w-3 mr-1" />
-                8 tuyến đường
+                {dashboardStats.totalRoutes} tuyến đường
               </p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
@@ -267,12 +266,12 @@ const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
                 <span className="text-sm text-gray-600">Tuyến đường hoạt động</span>
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-900 mr-2">
-                    {dashboardStats.activeRoutes}/8
+                    {dashboardStats.activeRoutes}/{dashboardStats.totalRoutes}
                   </span>
                   <div className="w-16 bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${(dashboardStats.activeRoutes / 8) * 100}%` }}
+                      style={{ width: `${dashboardStats.totalRoutes > 0 ? (dashboardStats.activeRoutes / dashboardStats.totalRoutes) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>

@@ -1,18 +1,20 @@
 // Bus tracking hook for Smart School Bus System
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { BusLocation } from '../types';
-import { mockBusLocations } from '../services/mockData';
+import { useAppData } from '../contexts/AppDataContext';
 import { AUTO_REFRESH_INTERVAL } from '../constants';
 
 export const useBusTracking = () => {
-  const [busLocations, setBusLocations] = useState<BusLocation[]>(mockBusLocations);
+  // Get bus locations from global context
+  const { busLocations, setBusLocations } = useAppData();
+  
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedBus, setSelectedBus] = useState<number | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // Update bus locations with random movement (preserving status for filter stability)
+  // Update bus locations with random movement (preserving status and students for consistency)
   const updateBusLocations = useCallback(() => {
     setBusLocations(prev => prev.map(bus => ({
       ...bus,
@@ -20,9 +22,9 @@ export const useBusTracking = () => {
       lng: bus.lng + (Math.random() - 0.5) * 0.001,
       speed: Math.max(0, bus.speed + (Math.random() - 0.5) * 10),
       lastUpdate: new Date().toLocaleTimeString('vi-VN'),
-      // Preserve status for filter stability - don't randomize
+      // Preserve status and students for consistency - don't randomize
     })));
-  }, []);
+  }, [setBusLocations]);
 
   // Preserve selectedBus when data updates - reset only if bus no longer exists
   useEffect(() => {

@@ -3,6 +3,7 @@ import Login from './components/auth/Login';
 import { AdminApp } from './components/apps/AdminApp';
 import { ParentApp } from './components/apps/ParentApp';
 import { DriverApp } from './components/apps/DriverApp';
+import { AppDataProvider } from './contexts/AppDataContext';
 import { useAuth } from './hooks';
 
 const App = () => {
@@ -44,7 +45,11 @@ const App = () => {
     }
   };
 
-  return renderApp();
+  return (
+    <AppDataProvider>
+      {renderApp()}
+    </AppDataProvider>
+  );
 };
 
 export default App;

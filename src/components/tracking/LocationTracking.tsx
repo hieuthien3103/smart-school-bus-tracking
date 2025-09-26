@@ -6,6 +6,7 @@ import { BusCard } from './BusCard';
 import { FilterButtons } from './FilterButtons';
 import { SearchBox } from './SearchBox';
 import { BusDetailPanel } from './BusDetailPanel';
+import { useAppData } from '../../contexts/AppDataContext';
 
 const LocationTracking = () => {
   // Use custom hook for all bus tracking logic
@@ -26,6 +27,9 @@ const LocationTracking = () => {
     handleSearchSelect,
     clearSearch
   } = useBusTracking();
+
+  // Get schedule data from context to calculate total students correctly
+  const { scheduleData } = useAppData();
 
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
@@ -84,8 +88,70 @@ const LocationTracking = () => {
     </div>
   );
 
+  // Calculate real-time stats
+  const totalBuses = busLocations.length;
+  const activeBuses = busLocations.filter(bus => bus.status === 'Đang di chuyển').length;
+  const pausedBuses = busLocations.filter(bus => bus.status === 'Dừng đón khách').length;
+  
+  // Calculate total students from ALL schedules (not just bus locations) 
+  // because one bus can have multiple schedules
+  const totalStudents = scheduleData.reduce((sum, schedule) => sum + schedule.students, 0);
+  
+
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Real-time Stats Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Tổng số xe</p>
+              <p className="text-2xl font-bold text-gray-900">{totalBuses}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Bus className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Đang di chuyển</p>
+              <p className="text-2xl font-bold text-green-600">{activeBuses}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <Navigation className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Dừng đón khách</p>
+              <p className="text-2xl font-bold text-blue-600">{pausedBuses}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <MapPin className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Tổng học sinh</p>
+              <p className="text-2xl font-bold text-purple-600">{totalStudents}</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Users className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
