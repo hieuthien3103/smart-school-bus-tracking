@@ -1,0 +1,437 @@
+import { useState, useRef } from 'react';
+import { 
+  Download, FileText, 
+  TrendingUp, Users, DollarSign, AlertTriangle,
+  PrinterIcon, Mail, Share2, Settings, RefreshCw
+} from 'lucide-react';
+import { 
+  Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, Legend, Tooltip,
+  ComposedChart
+} from 'recharts';
+
+const Reports = () => {
+  const [selectedReport, setSelectedReport] = useState('performance');
+  const [dateRange, setDateRange] = useState('this-month');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  // Mock data for reports
+  const performanceData = [
+    { month: 'T1', trips: 1240, onTime: 92, students: 2340, fuel: 1850, cost: 41500000 },
+    { month: 'T2', trips: 1180, onTime: 88, students: 2280, fuel: 1720, cost: 38600000 },
+    { month: 'T3', trips: 1350, onTime: 94, students: 2520, fuel: 1920, cost: 43200000 },
+    { month: 'T4', trips: 1280, onTime: 91, students: 2410, fuel: 1840, cost: 41300000 },
+    { month: 'T5', trips: 1420, onTime: 96, students: 2680, fuel: 2010, cost: 45100000 },
+    { month: 'T6', trips: 1380, onTime: 93, students: 2590, fuel: 1960, cost: 44000000 }
+  ];
+
+  const routeAnalysis = [
+    { route: 'Tuyến A', efficiency: 92, cost: 8500000, distance: 245, students: 156 },
+    { route: 'Tuyến B', efficiency: 88, cost: 7200000, distance: 198, students: 134 },
+    { route: 'Tuyến C', efficiency: 95, cost: 9800000, distance: 287, students: 178 },
+    { route: 'Tuyến D', efficiency: 85, cost: 6900000, distance: 167, students: 112 },
+    { route: 'Tuyến E', efficiency: 90, cost: 8100000, distance: 223, students: 145 }
+  ];
+
+  const maintenanceData = [
+    { type: 'Bảo trì định kỳ', count: 24, cost: 12500000, color: '#3b82f6' },
+    { type: 'Sửa chữa khẩn cấp', count: 8, cost: 8900000, color: '#ef4444' },
+    { type: 'Thay thế phụ tùng', count: 15, cost: 15600000, color: '#f59e0b' },
+    { type: 'Kiểm tra an toàn', count: 32, cost: 6700000, color: '#10b981' }
+  ];
+
+  const driverPerformance = [
+    { name: 'Nguyễn Văn A', trips: 145, onTime: 96, rating: 4.8, violations: 0 },
+    { name: 'Trần Thị B', trips: 138, onTime: 94, rating: 4.7, violations: 1 },
+    { name: 'Lê Văn C', trips: 152, onTime: 98, rating: 4.9, violations: 0 },
+    { name: 'Phạm Thị D', trips: 141, onTime: 92, rating: 4.6, violations: 2 },
+    { name: 'Hoàng Văn E', trips: 149, onTime: 95, rating: 4.8, violations: 0 }
+  ];
+
+  const reportTypes = [
+    { id: 'performance', label: 'Báo cáo hiệu suất', icon: TrendingUp, color: 'blue' },
+    { id: 'financial', label: 'Báo cáo tài chính', icon: DollarSign, color: 'green' },
+    { id: 'maintenance', label: 'Báo cáo bảo trì', icon: Settings, color: 'orange' },
+    { id: 'safety', label: 'Báo cáo an toàn', icon: AlertTriangle, color: 'red' },
+    { id: 'driver', label: 'Báo cáo tài xế', icon: Users, color: 'purple' }
+  ];
+
+  const handleExportPDF = () => {
+    setIsGenerating(true);
+    // Simulate PDF generation
+    setTimeout(() => {
+      setIsGenerating(false);
+      // In real app, would trigger PDF download
+      alert('Báo cáo PDF đã được tạo và tải xuống!');
+    }, 2000);
+  };
+
+  const handleExportExcel = () => {
+    setIsGenerating(true);
+    // Simulate Excel generation
+    setTimeout(() => {
+      setIsGenerating(false);
+      // In real app, would trigger Excel download
+      alert('Báo cáo Excel đã được tạo và tải xuống!');
+    }, 1500);
+  };
+
+  const handlePrint = () => {
+    if (printRef.current) {
+      const printContent = printRef.current.innerHTML;
+      const originalContent = document.body.innerHTML;
+      document.body.innerHTML = printContent;
+      window.print();
+      document.body.innerHTML = originalContent;
+      window.location.reload();
+    }
+  };
+
+  const renderPerformanceReport = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Xu hướng hiệu suất</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={performanceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis yAxisId="left" />
+              <YAxis yAxisId="right" orientation="right" />
+              <Tooltip />
+              <Legend />
+              <Bar yAxisId="left" dataKey="trips" fill="#3b82f6" name="Số chuyến" />
+              <Line yAxisId="right" type="monotone" dataKey="onTime" stroke="#10b981" strokeWidth={3} name="Đúng giờ (%)" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Phân tích tuyến đường</h3>
+          <div className="space-y-4">
+            {routeAnalysis.map((route, index) => (
+              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">{route.route}</h4>
+                    <span className={`text-sm font-semibold ${
+                      route.efficiency >= 90 ? 'text-green-600' : 
+                      route.efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {route.efficiency}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                    <div>{route.students} HS</div>
+                    <div>{route.distance}km</div>
+                    <div>{(route.cost / 1000000).toFixed(1)}M đ</div>
+                  </div>
+                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${
+                        route.efficiency >= 90 ? 'bg-green-500' : 
+                        route.efficiency >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}
+                      // CSS variable for dynamic width - acceptable inline style
+                      style={{'--progress-width': `${route.efficiency}%`} as React.CSSProperties & { '--progress-width': string }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Chi phí và tiêu thụ nhiên liệu</h3>
+        <ResponsiveContainer width="100%" height={350}>
+          <ComposedChart data={performanceData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" />
+            <Tooltip formatter={(value, name) => [
+              name === 'cost' ? `${(value as number / 1000000).toFixed(1)}M đ` : `${value}L`,
+              name === 'cost' ? 'Chi phí' : 'Nhiên liệu'
+            ]} />
+            <Legend />
+            <Bar yAxisId="left" dataKey="fuel" fill="#f59e0b" name="Nhiên liệu (L)" />
+            <Line yAxisId="right" type="monotone" dataKey="cost" stroke="#ef4444" strokeWidth={3} name="Chi phí (VNĐ)" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+
+  const renderMaintenanceReport = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Phân bổ bảo trì</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsPieChart>
+              <Pie
+                data={maintenanceData}
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                dataKey="count"
+                label={({ name, value }) => `${name}: ${value}`}
+              >
+                {maintenanceData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Chi phí bảo trì</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={maintenanceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="type" angle={-45} textAnchor="end" height={100} />
+              <YAxis />
+              <Tooltip formatter={(value) => [`${(value as number / 1000000).toFixed(1)}M đ`, 'Chi phí']} />
+              <Bar dataKey="cost" fill="#3b82f6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Chi tiết bảo trì</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại bảo trì</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số lần</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chi phí</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chi phí/lần</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {maintenanceData.map((item, index) => (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      {/* CSS variable for dynamic color - acceptable inline style */}
+                      <div className="w-3 h-3 rounded-full mr-3" style={{'--bg-color': item.color} as React.CSSProperties & { '--bg-color': string }}></div>
+                      <div className="text-sm font-medium text-gray-900">{item.type}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.count}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(item.cost / 1000000).toFixed(1)}M đ
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(item.cost / item.count / 1000).toFixed(0)}K đ
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDriverReport = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Hiệu suất tài xế</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tài xế</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số chuyến</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đúng giờ (%)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đánh giá</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vi phạm</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {driverPerformance.map((driver, index) => (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{driver.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{driver.trips}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            driver.onTime >= 95 ? 'bg-green-500' : 
+                            driver.onTime >= 90 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          // CSS variable for dynamic width - acceptable inline style
+                          style={{'--progress-width': `${driver.onTime}%`} as React.CSSProperties & { '--progress-width': string }}
+                        ></div>
+                      </div>
+                      <span className="text-sm text-gray-900">{driver.onTime}%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className="text-sm text-gray-900 mr-1">{driver.rating}</span>
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={i < Math.floor(driver.rating) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
+                        ))}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      driver.violations === 0 ? 'bg-green-100 text-green-800' : 
+                      driver.violations <= 2 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {driver.violations} vi phạm
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      driver.onTime >= 95 && driver.violations === 0 ? 'bg-green-100 text-green-800' : 
+                      driver.onTime >= 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {driver.onTime >= 95 && driver.violations === 0 ? 'Xuất sắc' : 
+                       driver.onTime >= 90 ? 'Tốt' : 'Cần cải thiện'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCurrentReport = () => {
+    switch (selectedReport) {
+      case 'performance':
+        return renderPerformanceReport();
+      case 'maintenance':
+        return renderMaintenanceReport();
+      case 'driver':
+        return renderDriverReport();
+      case 'financial':
+        return renderPerformanceReport(); // Simplified for demo
+      case 'safety':
+        return renderDriverReport(); // Simplified for demo
+      default:
+        return renderPerformanceReport();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Báo cáo & Thống kê</h1>
+          <p className="text-gray-600 mt-1">Tạo và xuất báo cáo chi tiết về hoạt động hệ thống</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handlePrint}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <PrinterIcon className="h-4 w-4" />
+            <span>In</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            disabled={isGenerating}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+          >
+            {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            <span>Excel</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={isGenerating}
+            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            <span>PDF</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Loại báo cáo</label>
+            <div className="grid grid-cols-1 gap-2">
+              {reportTypes.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setSelectedReport(type.id)}
+                  className={`flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${
+                    selectedReport === type.id
+                      ? `bg-${type.color}-100 text-${type.color}-700 border border-${type.color}-200`
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <type.icon className="h-5 w-5" />
+                  <span className="font-medium">{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Khoảng thời gian</label>
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              title="Chọn khoảng thời gian báo cáo"
+            >
+              <option value="this-week">Tuần này</option>
+              <option value="this-month">Tháng này</option>
+              <option value="last-month">Tháng trước</option>
+              <option value="this-quarter">Quý này</option>
+              <option value="this-year">Năm này</option>
+              <option value="custom">Tùy chỉnh</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hành động</label>
+            <div className="flex space-x-2">
+              <button className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <RefreshCw className="h-4 w-4" />
+                <span>Cập nhật</span>
+              </button>
+              <button className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" title="Chia sẻ báo cáo">
+                <Share2 className="h-4 w-4" />
+              </button>
+              <button className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" title="Gửi email báo cáo">
+                <Mail className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Content */}
+      <div ref={printRef}>
+        {renderCurrentReport()}
+      </div>
+    </div>
+  );
+};
+
+export default Reports;
