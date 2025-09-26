@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Users, 
@@ -42,7 +42,7 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     { id: 4, name: 'Phạm Minh Đức', pickup: '07:30', status: 'absent', phone: '0903456789' }
   ]);
 
-  const [routeInfo, setRouteInfo] = useState({
+  const [routeInfo] = useState({
     totalStops: 8,
     completedStops: 2,
     currentStop: 'Điểm đón số 3 - Ngã tư Láng Hạ',

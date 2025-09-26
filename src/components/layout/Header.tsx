@@ -28,7 +28,17 @@ const Header = ({ currentTime, sidebarOpen, setSidebarOpen, onLogout, user }: He
             <Bell className="h-4 w-4 mr-1" />
             <span>3 thông báo</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {user?.name || 'User'}
+              </div>
+              <div className="text-xs text-gray-500 capitalize">
+                {user?.role === 'admin' ? 'Quản trị viên' : 
+                 user?.role === 'parent' ? 'Phụ huynh' : 
+                 user?.role === 'driver' ? 'Tài xế' : user?.role}
+              </div>
+            </div>
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-white">
                 {user?.name?.charAt(0) || user?.role?.charAt(0)?.toUpperCase() || 'U'}

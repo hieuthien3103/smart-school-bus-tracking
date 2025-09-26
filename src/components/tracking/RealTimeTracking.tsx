@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Navigation, Wifi, WifiOff, Clock, AlertTriangle } from 'lucide-react';
+import { Navigation, Wifi, WifiOff, Clock, AlertTriangle } from 'lucide-react';
 
 interface RealTimeData {
   busId: string;
@@ -150,7 +150,7 @@ const RealTimeTracking = () => {
     }
   };
 
-  const simulateNotificationSend = (notification: any) => {
+  const simulateNotificationSend = () => {
     // Simulate different notification methods
     const methods = [
       { type: 'SMS', status: 'sent', icon: '📱' },
@@ -316,7 +316,7 @@ const RealTimeTracking = () => {
                     </p>
                     
                     <div className="flex items-center space-x-4">
-                      {simulateNotificationSend(notification).map((method, index) => (
+                      {simulateNotificationSend().map((method, index) => (
                         <div key={index} className="flex items-center space-x-1 text-xs">
                           <span>{method.icon}</span>
                           <span className="text-gray-600">{method.type}</span>

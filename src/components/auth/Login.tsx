@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Bus, User, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (userType: 'admin' | 'parent' | 'driver', userData: any) => void;
+  onLogin: (username: string, password: string) => Promise<boolean>;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
@@ -12,27 +12,29 @@ const Login = ({ onLogin }: LoginProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Demo users cho testing
-  const demoUsers = {
-    admin: { username: 'admin', password: 'admin123', name: 'Quản trị viên', role: 'admin' },
-    parent: { username: 'parent', password: 'parent123', name: 'Nguyễn Văn A', role: 'parent', studentId: 1 },
-    driver: { username: 'driver', password: 'driver123', name: 'Trần Văn B', role: 'driver', busId: 1 }
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate input
+    if (!username.trim() || !password.trim()) {
+      alert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
+      return;
+    }
+    
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      const user = demoUsers[userType];
-      if (username === user.username && password === user.password) {
-        onLogin(userType, user);
-      } else {
+    try {
+      const success = await onLogin(username, password);
+      if (!success) {
         alert('Sai tên đăng nhập hoặc mật khẩu!');
       }
+    } catch (error) {
+      alert('Đã xảy ra lỗi khi đăng nhập!');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const userTypeOptions = [
@@ -143,11 +145,44 @@ const Login = ({ onLogin }: LoginProps) => {
           {/* Demo Credentials */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Tài khoản demo:</h3>
-            <div className="space-y-1 text-xs text-gray-600">
-              <div><strong>Phụ huynh:</strong> parent / parent123</div>
-              <div><strong>Tài xế:</strong> driver / driver123</div>
-              <div><strong>Admin:</strong> admin / admin123</div>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('parent');
+                  setPassword('parent123');
+                  setUserType('parent');
+                }}
+                className="text-left p-2 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              >
+                <strong>Phụ huynh:</strong> parent / parent123
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('driver');
+                  setPassword('driver123');
+                  setUserType('driver');
+                }}
+                className="text-left p-2 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              >
+                <strong>Tài xế:</strong> driver / driver123
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('admin');
+                  setPassword('admin123');
+                  setUserType('admin');
+                }}
+                className="text-left p-2 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              >
+                <strong>Admin:</strong> admin / admin123
+              </button>
             </div>
+            <p className="text-xs text-gray-500 mt-2 italic">
+              💡 Nhấp vào tài khoản để tự động điền thông tin
+            </p>
           </div>
         </div>
       </div>

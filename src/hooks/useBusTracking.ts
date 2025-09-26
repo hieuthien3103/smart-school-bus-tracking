@@ -1,0 +1,102 @@
+// Bus tracking hook for Smart School Bus System
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { BusLocation } from '../types';
+import { mockBusLocations } from '../services/mockData';
+import { AUTO_REFRESH_INTERVAL } from '../constants';
+
+export const useBusTracking = () => {
+  const [busLocations, setBusLocations] = useState<BusLocation[]>(mockBusLocations);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedBus, setSelectedBus] = useState<number | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Update bus locations with random movement (preserving status for filter stability)
+  const updateBusLocations = useCallback(() => {
+    setBusLocations(prev => prev.map(bus => ({
+      ...bus,
+      lat: bus.lat + (Math.random() - 0.5) * 0.001,
+      lng: bus.lng + (Math.random() - 0.5) * 0.001,
+      speed: Math.max(0, bus.speed + (Math.random() - 0.5) * 10),
+      lastUpdate: new Date().toLocaleTimeString('vi-VN'),
+      // Preserve status for filter stability - don't randomize
+    })));
+  }, []);
+
+  // Preserve selectedBus when data updates - reset only if bus no longer exists
+  useEffect(() => {
+    if (selectedBus !== null) {
+      const stillExists = busLocations.some(bus => bus.id === selectedBus);
+      if (!stillExists) {
+        setSelectedBus(null);
+      }
+    }
+  }, [busLocations, selectedBus]);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(updateBusLocations, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [autoRefresh, updateBusLocations]);
+
+  // Search functionality
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    return busLocations.filter(bus =>
+      bus.busNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bus.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bus.driver.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [busLocations, searchQuery]);
+
+  // Filtered buses (stable filtering)
+  const filteredBuses = useMemo(() => {
+    if (filterStatus === 'all') return busLocations;
+    return busLocations.filter(bus => 
+      bus.status.toLowerCase().includes(filterStatus.toLowerCase())
+    );
+  }, [busLocations, filterStatus]);
+
+  // Search handlers
+  const handleSearchSelect = useCallback((bus: BusLocation) => {
+    setSelectedBus(bus.id);
+    setSearchQuery('');
+    setShowSearchResults(false);
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setShowSearchResults(false);
+  }, []);
+
+  // Filter handler
+  const handleFilterChange = useCallback((status: string) => {
+    setFilterStatus(status);
+  }, []);
+
+  return {
+    // States
+    busLocations,
+    filteredBuses,
+    filterStatus,
+    selectedBus,
+    autoRefresh,
+    searchQuery,
+    searchResults,
+    showSearchResults,
+
+    // Actions
+    setFilterStatus: handleFilterChange,
+    setSelectedBus,
+    setAutoRefresh,
+    setSearchQuery,
+    setShowSearchResults,
+    updateBusLocations,
+    handleSearchSelect,
+    clearSearch
+  };
+};

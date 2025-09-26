@@ -29,14 +29,14 @@ const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
     totalAlerts: 3
   });
 
-  const [recentActivities, setRecentActivities] = useState([
+  const [recentActivities] = useState([
     { id: 1, type: 'bus', message: 'Xe BS001 đã hoàn thành tuyến A1', time: '2 phút trước', status: 'success' },
     { id: 2, type: 'alert', message: 'Cảnh báo: Xe BS003 chậm tiến độ 10 phút', time: '5 phút trước', status: 'warning' },
     { id: 3, type: 'student', message: 'Học sinh Nguyễn Văn An đã được đón', time: '8 phút trước', status: 'info' },
     { id: 4, type: 'driver', message: 'Tài xế Trần Văn B đã đăng nhập', time: '12 phút trước', status: 'info' }
   ]);
 
-  const [activeAlerts, setActiveAlerts] = useState([
+  const [activeAlerts] = useState([
     { id: 1, type: 'delay', message: 'Xe BS003 chậm 10 phút so với lịch trình', severity: 'medium', route: 'Tuyến B2' },
     { id: 2, type: 'maintenance', message: 'Xe BS007 cần bảo trì định kỳ', severity: 'low', route: 'Tuyến C1' },
     { id: 3, type: 'emergency', message: 'Sự cố nhỏ tại điểm đón số 5', severity: 'high', route: 'Tuyến A3' }
