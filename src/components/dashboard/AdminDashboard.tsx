@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart3, 
   Users, 
@@ -9,7 +9,9 @@ import {
   Activity,
   AlertTriangle,
   TrendingUp,
-  Clock
+  Clock,
+  Plus,
+  UserPlus
 } from 'lucide-react';
 import { useAppData } from '../../contexts/AppDataContext';
 
@@ -18,9 +20,11 @@ interface AdminDashboardProps {
     name: string;
     role: string;
   };
+  onNavigate?: (tab: string) => void;
+  onAddNew?: (type: 'student' | 'driver' | 'bus' | 'schedule') => void;
 }
 
-const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
+const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps) => {
   // Get real data from context
   const { busLocations, scheduleData, driversData, studentsData } = useAppData();
   
@@ -36,7 +40,45 @@ const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
     totalAlerts: busLocations.filter(bus => bus.status === 'Sự cố').length
   }), [busLocations, scheduleData, driversData, studentsData]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Quick navigation shortcuts
+      if (event.ctrlKey) {
+        switch (event.key.toLowerCase()) {
+          case 'b':
+            event.preventDefault();
+            onNavigate?.('bus');
+            break;
+          case 't':
+            event.preventDefault();
+            onNavigate?.('tracking');
+            break;
+          case 'l':
+            event.preventDefault();
+            onNavigate?.('schedule');
+            break;
+          case 'r':
+            event.preventDefault();
+            onNavigate?.('reports');
+            break;
+          case '1':
+            event.preventDefault();
+            onAddNew?.('student');
+            break;
+          case '2':
+            event.preventDefault();
+            onAddNew?.('driver');
+            break;
+        }
+      }
+    };
 
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onNavigate, onAddNew]);
 
   const [recentActivities] = useState([
     { id: 1, type: 'bus', message: 'Xe BS001 đã hoàn thành tuyến A1', time: '2 phút trước', status: 'success' },
@@ -214,30 +256,97 @@ const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Thao tác Nhanh</h2>
             
             <div className="space-y-3">
-              <button className="w-full p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-left flex items-center">
-                <Bus className="h-5 w-5 mr-3" />
-                Quản lý Xe buýt
+              <button 
+                onClick={() => onNavigate?.('bus')}
+                className="w-full p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-left flex items-center justify-between"
+                title="Phím tắt: Ctrl+B"
+              >
+                <div className="flex items-center">
+                  <Bus className="h-5 w-5 mr-3" />
+                  Quản lý Xe buýt
+                </div>
+                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Ctrl+B</span>
               </button>
               
-              <button className="w-full p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-left flex items-center">
+              <button 
+                onClick={() => onNavigate?.('student')}
+                className="w-full p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-left flex items-center"
+              >
                 <Users className="h-5 w-5 mr-3" />
                 Quản lý Học sinh
               </button>
               
-              <button className="w-full p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-left flex items-center">
-                <MapPin className="h-5 w-5 mr-3" />
-                Theo dõi Vị trí
+              <button 
+                onClick={() => onNavigate?.('tracking')}
+                className="w-full p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-left flex items-center justify-between"
+                title="Phím tắt: Ctrl+T"
+              >
+                <div className="flex items-center">
+                  <MapPin className="h-5 w-5 mr-3" />
+                  Theo dõi Vị trí
+                </div>
+                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">Ctrl+T</span>
               </button>
               
-              <button className="w-full p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-left flex items-center">
-                <Calendar className="h-5 w-5 mr-3" />
-                Lịch trình
+              <button 
+                onClick={() => onNavigate?.('schedule')}
+                className="w-full p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-left flex items-center justify-between"
+                title="Phím tắt: Ctrl+L"
+              >
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-3" />
+                  Lịch trình
+                </div>
+                <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">Ctrl+L</span>
               </button>
               
-              <button className="w-full p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-left flex items-center">
+              <button 
+                onClick={() => onNavigate?.('reports')}
+                className="w-full p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-left flex items-center"
+              >
                 <BarChart3 className="h-5 w-5 mr-3" />
                 Báo cáo
               </button>
+              
+              {/* Divider */}
+              <div className="border-t border-gray-200 my-3"></div>
+              
+              {/* Quick Add Actions */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Thêm mới nhanh</p>
+                
+                <button 
+                  onClick={() => onAddNew?.('student')}
+                  className="w-full p-2.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-left flex items-center justify-between text-sm"
+                  title="Phím tắt: Ctrl+1"
+                >
+                  <div className="flex items-center">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Thêm học sinh mới
+                  </div>
+                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Ctrl+1</span>
+                </button>
+                
+                <button 
+                  onClick={() => onAddNew?.('driver')}
+                  className="w-full p-2.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-left flex items-center justify-between text-sm"
+                  title="Phím tắt: Ctrl+2"
+                >
+                  <div className="flex items-center">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Thêm tài xế mới
+                  </div>
+                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Ctrl+2</span>
+                </button>
+                
+                <button 
+                  onClick={() => onAddNew?.('schedule')}
+                  className="w-full p-2.5 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-left flex items-center text-sm"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Thêm lịch trình mới
+                </button>
+              </div>
             </div>
           </div>
 

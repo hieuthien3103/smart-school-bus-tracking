@@ -303,7 +303,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   const renderAdminContent = useMemo(() => {
     switch (activeTab) {
       case 'dashboard':
-        return <AdminDashboard adminData={{ name: user?.name || '', role: user?.role || '' }} />;
+        return <AdminDashboard 
+          adminData={{ name: user?.name || '', role: user?.role || '' }} 
+          onNavigate={setActiveTab}
+          onAddNew={(type) => handleAdd(type)}
+        />;
       case 'schedule':
         return (
           <ScheduleManagement
@@ -349,7 +353,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
       case 'settings':
         return <Settings />;
       default:
-        return <AdminDashboard adminData={{ name: user?.name || '', role: user?.role || '' }} />;
+        return <AdminDashboard 
+          adminData={{ name: user?.name || '', role: user?.role || '' }} 
+          onNavigate={setActiveTab}
+          onAddNew={(type) => handleAdd(type)}
+        />;
     }
   }, [activeTab, user, scheduleData, studentsData, driversData, busesData]);
 
