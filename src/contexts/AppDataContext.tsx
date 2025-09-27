@@ -1,8 +1,8 @@
 // Global data context for Smart School Bus System
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { BusLocation, Schedule, Driver } from '../types';
-import { mockBusLocations, mockScheduleData, mockDriversData } from '../services/mockData';
+import type { BusLocation, Schedule, Driver, Student } from '../types';
+import { mockBusLocations, mockScheduleData, mockDriversData, mockStudentsData } from '../services/mockData';
 
 interface AppDataContextType {
   // Bus tracking data
@@ -17,6 +17,15 @@ interface AppDataContextType {
   // Driver data  
   driversData: Driver[];
   setDriversData: (drivers: Driver[]) => void;
+  
+  // Students data
+  studentsData: Student[];
+  setStudentsData: React.Dispatch<React.SetStateAction<Student[]>>;
+  updateStudentStatus: (studentId: number, status: string) => void;
+  getStudentsByDriver: (driverName: string) => Student[];
+  addStudent: (student: Omit<Student, 'id'>) => void;
+  updateStudent: (studentId: number, student: Partial<Student>) => void;
+  deleteStudent: (studentId: number) => void;
   
   // Sync functions
   syncBusLocationFromSchedule: (schedules: Schedule[]) => void;
@@ -33,6 +42,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
   const [busLocations, setBusLocations] = useState<BusLocation[]>(mockBusLocations);
   const [scheduleData, setScheduleData] = useState<Schedule[]>(mockScheduleData);
   const [driversData, setDriversData] = useState<Driver[]>(mockDriversData);
+  const [studentsData, setStudentsData] = useState<Student[]>(mockStudentsData);
 
   // Generate BusLocation from Bus data for tracking
   const generateBusLocationFromBus = useCallback((busData: any): BusLocation => {
@@ -137,6 +147,48 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     });
   }, []);
 
+  // Student management functions
+  const updateStudentStatus = useCallback((studentId: number, status: string) => {
+    setStudentsData(prev => 
+      prev.map(student => 
+        student.id === studentId 
+          ? { ...student, status }
+          : student
+      )
+    );
+  }, []);
+
+  const getStudentsByDriver = useCallback((driverName: string) => {
+    // Find the bus for this driver
+    const driverBus = busLocations.find(bus => bus.driver === driverName);
+    if (!driverBus) return [];
+    
+    // Return students assigned to this bus
+    return studentsData.filter(student => student.bus === driverBus.busNumber);
+  }, [busLocations, studentsData]);
+
+  // Student CRUD operations
+  const addStudent = useCallback((student: Omit<Student, 'id'>) => {
+    setStudentsData(prev => {
+      const newId = Math.max(...prev.map(s => s.id), 0) + 1;
+      return [...prev, { ...student, id: newId }];
+    });
+  }, []);
+
+  const updateStudent = useCallback((studentId: number, student: Partial<Student>) => {
+    setStudentsData(prev => 
+      prev.map(s => 
+        s.id === studentId 
+          ? { ...s, ...student }
+          : s
+      )
+    );
+  }, []);
+
+  const deleteStudent = useCallback((studentId: number) => {
+    setStudentsData(prev => prev.filter(s => s.id !== studentId));
+  }, []);
+
   const contextValue: AppDataContextType = {
     busLocations,
     setBusLocations,
@@ -145,6 +197,13 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     setScheduleData,
     driversData,
     setDriversData,
+    studentsData,
+    setStudentsData,
+    updateStudentStatus,
+    getStudentsByDriver,
+    addStudent,
+    updateStudent,
+    deleteStudent,
     syncBusLocationFromSchedule,
     generateBusLocationFromBus
   };

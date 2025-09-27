@@ -11,6 +11,7 @@ import {
   Fuel,
   Activity
 } from 'lucide-react';
+import { useAppData } from '../../contexts/AppDataContext';
 
 interface DriverDashboardProps {
   driverData: {
@@ -18,18 +19,47 @@ interface DriverDashboardProps {
     name: string;
     busId: number;
     route: string;
+    license?: string;
+    phone?: string;
+    experience?: string;
+    avatar?: string;
   };
 }
 
 const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
+  // Get real-time data from global context
+  const { busLocations, scheduleData, getStudentsByDriver, updateStudentStatus } = useAppData();
+  
+  // Find current bus data for this driver
+  const currentBus = busLocations.find(bus => bus.driver === driverData.name);
+  // Find current schedule for additional route info
+  const currentSchedule = scheduleData.find(schedule => schedule.driver === driverData.name);
+  
+  // Get students for this driver from global context and convert to DriverDashboard format
+  const contextStudents = getStudentsByDriver(driverData.name);
+  
+  // Convert context students to DriverDashboard format
+  const convertedStudents = contextStudents.map(student => ({
+    id: student.id,
+    name: student.name,
+    pickup: '07:15', // Default time, could be enhanced with real schedule data
+    dropoff: '16:30',
+    pickupAddress: student.pickup,
+    dropoffAddress: student.dropoff,
+    status: student.status === 'Đã lên xe' ? 'picked' : 
+            student.status === 'Đã xuống xe' ? 'dropped' : 
+            student.status === 'Vắng mặt' ? 'absent' : 'waiting',
+    phone: student.phone
+  }));
+  
   const [currentLocation, setCurrentLocation] = useState({
-    lat: 21.0285,
-    lng: 105.8542,
+    lat: currentBus?.lat || 21.0285,
+    lng: currentBus?.lng || 105.8542,
     address: 'Đường Láng, Đống Đa, Hà Nội'
   });
 
   const [busStatus, setBusStatus] = useState({
-    speed: 0,
+    speed: currentBus?.speed || 0,
     fuel: 85,
     engine: 'normal',
     temperature: 92
@@ -37,43 +67,62 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
 
   // Trip mode: 'pickup' (đón học sinh) hoặc 'dropoff' (trả học sinh)
   const [tripMode, setTripMode] = useState<'pickup' | 'dropoff'>('pickup');
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'waiting' | 'picked' | 'dropped' | 'absent'>('all');
+  const [compactView, setCompactView] = useState(false);
 
-  const [students, setStudents] = useState([
-    { id: 1, name: 'Nguyễn Minh An', pickup: '07:15', dropoff: '16:30', pickupAddress: 'Ngã tư Láng Hạ', dropoffAddress: '123 Đường ABC', status: 'waiting', phone: '0901234567' },
-    { id: 2, name: 'Trần Thị Bình', pickup: '07:20', dropoff: '16:35', pickupAddress: 'Bưu điện Đống Đa', dropoffAddress: '456 Đường DEF', status: 'picked', phone: '0907654321' },
-    { id: 3, name: 'Lê Văn Cường', pickup: '07:25', dropoff: '16:40', pickupAddress: 'Trường THCS XYZ', dropoffAddress: '789 Đường GHI', status: 'waiting', phone: '0909876543' },
-    { id: 4, name: 'Phạm Minh Đức', pickup: '07:30', dropoff: '16:45', pickupAddress: 'Chợ Hôm', dropoffAddress: '101 Đường JKL', status: 'absent', phone: '0903456789' }
-  ]);
+  // Use converted students from context, fallback to mock data if no context students
+  const [students, setStudents] = useState(
+    convertedStudents.length > 0 ? convertedStudents : [
+      { id: 1, name: 'Nguyễn Minh An', pickup: '07:15', dropoff: '16:30', pickupAddress: 'Ngã tư Láng Hạ', dropoffAddress: '123 Đường ABC', status: 'waiting', phone: '0901234567' },
+      { id: 2, name: 'Trần Thị Bình', pickup: '07:20', dropoff: '16:35', pickupAddress: 'Bưu điện Đống Đa', dropoffAddress: '456 Đường DEF', status: 'picked', phone: '0907654321' },
+      { id: 3, name: 'Lê Văn Cường', pickup: '07:25', dropoff: '16:40', pickupAddress: 'Trường THCS XYZ', dropoffAddress: '789 Đường GHI', status: 'waiting', phone: '0909876543' }
+    ]
+  );
 
+  // Route info from real data - combining bus location and schedule data
   const [routeInfo] = useState({
-    totalStops: 8,
-    completedStops: 2,
-    currentStop: 'Điểm đón số 3 - Ngã tư Láng Hạ',
-    nextStop: 'Điểm đón số 4 - Bưu điện Đống Đa',
-    estimatedTime: '15 phút'
+    totalStops: currentBus?.routeStops?.length || 8,
+    completedStops: currentBus?.currentStopIndex || 2,
+    currentStop: currentBus?.routeStops?.[currentBus.currentStopIndex] || 'Điểm đón số 3 - Ngã tư Láng Hạ',
+    nextStop: currentBus?.nextStop || 'Điểm đón số 4 - Bưu điện Đống Đa', 
+    estimatedTime: currentBus?.estimatedArrival || '15 phút',
+    // Additional route data from schedule
+    routeName: currentSchedule?.route || currentBus?.route || driverData.route,
+    totalStudents: currentSchedule?.students || currentBus?.students || 0
   });
 
-  // Simulation real-time updates
+  // Sync students when context data changes
+  useEffect(() => {
+    if (convertedStudents.length > 0) {
+      setStudents(convertedStudents);
+    }
+  }, [convertedStudents]);
+
+  // Simulation real-time updates with real data integration
   useEffect(() => {
     const interval = setInterval(() => {
-      // Update bus speed randomly
+      // Update bus speed from context or randomly
       setBusStatus(prev => ({
         ...prev,
-        speed: Math.floor(Math.random() * 40) + 10 // 10-50 km/h
+        speed: currentBus?.speed || Math.floor(Math.random() * 40) + 10
       }));
 
-      // Update location slightly
+      // Update location from context or simulate
       setCurrentLocation(prev => ({
         ...prev,
-        lat: prev.lat + (Math.random() - 0.5) * 0.001,
-        lng: prev.lng + (Math.random() - 0.5) * 0.001
+        lat: currentBus?.lat || (prev.lat + (Math.random() - 0.5) * 0.001),
+        lng: currentBus?.lng || (prev.lng + (Math.random() - 0.5) * 0.001)
       }));
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [currentBus]);
 
   const handleStudentStatus = (studentId: number, newStatus: 'picked' | 'absent' | 'dropped') => {
+    // Update local state
     setStudents(prev => 
       prev.map(student => 
         student.id === studentId 
@@ -81,6 +130,12 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
           : student
       )
     );
+    
+    // Sync with global context - convert status back to context format
+    const contextStatus = newStatus === 'picked' ? 'Đã lên xe' :
+                         newStatus === 'dropped' ? 'Đã xuống xe' :
+                         newStatus === 'absent' ? 'Vắng mặt' : 'Chờ xe';
+    updateStudentStatus(studentId, contextStatus);
   };
 
   const emergencyCall = () => {
@@ -107,40 +162,72 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     }
   };
 
+  // Filter students based on search term and status
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.phone.includes(searchTerm);
+    const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Dashboard Tài xế - {driverData.name}
-            </h1>
-            <p className="text-gray-600">Tuyến {driverData.route} - Xe buýt #{driverData.busId}</p>
+          <div className="flex items-center">
+            {/* Driver Avatar */}
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl mr-4 shadow-lg">
+              {driverData.name.split(' ').map(word => word[0]).join('').slice(0, 2)}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                Smart School Bus - Tài xế
+              </h1>
+              <p className="text-lg text-blue-600 font-medium mb-1">
+                Xin chào, {driverData.name}! 👋
+              </p>
+              <p className="text-gray-600">Tuyến {driverData.route} - Xe buýt #{driverData.busId}</p>
+              <div className="flex items-center mt-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                <span className="text-sm text-green-600 font-medium">Đang hoạt động</span>
+              </div>
+            </div>
           </div>
           
-          {/* Trip Mode Selector */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setTripMode('pickup')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                tripMode === 'pickup' 
-                  ? 'bg-white text-blue-600 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              🚌 Đón học sinh
-            </button>
-            <button
-              onClick={() => setTripMode('dropoff')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                tripMode === 'dropoff' 
-                  ? 'bg-white text-blue-600 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              🏠 Trả học sinh
-            </button>
+          <div className="flex items-center gap-4">
+            {/* Current Time & Shift */}
+            <div className="text-right mr-4">
+              <p className="text-sm text-gray-500">Ca làm việc</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-xs text-blue-600">Sáng 07:00-12:00</p>
+            </div>
+
+            {/* Trip Mode Selector */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setTripMode('pickup')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  tripMode === 'pickup' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🚌 Đón học sinh
+              </button>
+              <button
+                onClick={() => setTripMode('dropoff')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  tripMode === 'dropoff' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🏠 Trả học sinh
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -265,79 +352,186 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
 
         {/* Student List */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Users className="h-5 w-5 text-green-600 mr-2" />
-            {tripMode === 'pickup' ? 'Danh sách Đón học sinh' : 'Danh sách Trả học sinh'}
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Users className="h-5 w-5 text-green-600 mr-2" />
+              {tripMode === 'pickup' ? 'Danh sách Đón học sinh' : 'Danh sách Trả học sinh'}
+              <span className="ml-2 text-sm text-gray-500">({filteredStudents.length}/{students.length})</span>
+            </h2>
+            
+            {/* View Options */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCompactView(!compactView)}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  compactView ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}
+                title={compactView ? 'Chế độ mở rộng' : 'Chế độ thu gọn'}
+              >
+                {compactView ? '📋' : '📖'}
+              </button>
+            </div>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="mb-4 space-y-3">
+            {/* Search Bar */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên hoặc số điện thoại..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex flex-wrap gap-2">
+              {['all', 'waiting', 'picked', 'dropped', 'absent'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status as any)}
+                  className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                    statusFilter === status
+                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {status === 'all' ? 'Tất cả' : getStatusText(status)}
+                  <span className="ml-1 text-xs">
+                    ({status === 'all' ? students.length : students.filter(s => s.status === status).length})
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
           
-          <div className="space-y-3">
-            {students.map((student) => (
-              <div key={student.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{student.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {tripMode === 'pickup' ? `Đón lúc: ${student.pickup}` : `Trả lúc: ${student.dropoff}`}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      📍 {tripMode === 'pickup' ? student.pickupAddress : student.dropoffAddress}
-                    </p>
+          {/* Student List with Scroll */}
+          <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+            {filteredStudents.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                <p>Không tìm thấy học sinh nào</p>
+                {searchTerm && (
+                  <button
+                    onClick={() => {setSearchTerm(''); setStatusFilter('all');}}
+                    className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+                  >
+                    Xóa bộ lọc
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredStudents.map((student) => (
+              <div key={student.id} className={`border border-gray-200 rounded-lg transition-all ${
+                compactView ? 'p-3' : 'p-4'
+              }`}>
+                <div className={`flex items-center justify-between ${compactView ? 'mb-1' : 'mb-2'}`}>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-medium text-gray-900 truncate ${compactView ? 'text-sm' : ''}`}>
+                      {student.name}
+                    </h3>
+                    {!compactView && (
+                      <>
+                        <p className="text-sm text-gray-500">
+                          {tripMode === 'pickup' ? `Đón lúc: ${student.pickup}` : `Trả lúc: ${student.dropoff}`}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1 truncate">
+                          📍 {tripMode === 'pickup' ? student.pickupAddress : student.dropoffAddress}
+                        </p>
+                      </>
+                    )}
+                    {compactView && (
+                      <p className="text-xs text-gray-500">
+                        {tripMode === 'pickup' ? student.pickup : student.dropoff} • {student.phone}
+                      </p>
+                    )}
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.status)}`}>
-                    {getStatusText(student.status)}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${getStatusColor(student.status)}`}>
+                    {compactView ? (
+                      student.status === 'picked' ? '✓' : 
+                      student.status === 'dropped' ? '📍' :
+                      student.status === 'absent' ? '✗' : '⏳'
+                    ) : (
+                      getStatusText(student.status)
+                    )}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Phone className="h-4 w-4 mr-1" />
-                    {student.phone}
+                  {!compactView && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Phone className="h-4 w-4 mr-1" />
+                      {student.phone}
+                    </div>
+                  )}
+                  
+                  {/* Action Buttons */}
+                  <div className={`flex gap-1 ${compactView ? 'ml-auto' : ''}`}>
+                    {/* Pickup Mode Buttons */}
+                    {tripMode === 'pickup' && student.status === 'waiting' && (
+                      <>
+                        <button
+                          onClick={() => handleStudentStatus(student.id, 'picked')}
+                          className={`bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors ${
+                            compactView ? 'px-2 py-1 text-xs' : 'px-3 py-1 text-xs'
+                          }`}
+                        >
+                          {compactView ? '✓' : 'Đã đón'}
+                        </button>
+                        <button
+                          onClick={() => handleStudentStatus(student.id, 'absent')}
+                          className={`bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors ${
+                            compactView ? 'px-2 py-1 text-xs' : 'px-3 py-1 text-xs'
+                          }`}
+                        >
+                          {compactView ? '✗' : 'Vắng mặt'}
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Dropoff Mode Buttons */}
+                    {tripMode === 'dropoff' && student.status === 'picked' && (
+                      <>
+                        <button
+                          onClick={() => handleStudentStatus(student.id, 'dropped')}
+                          className={`bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors ${
+                            compactView ? 'px-2 py-1 text-xs' : 'px-3 py-1 text-xs'
+                          }`}
+                        >
+                          {compactView ? '📍' : 'Đã trả'}
+                        </button>
+                        <button
+                          onClick={() => handleStudentStatus(student.id, 'absent')}
+                          className={`bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors ${
+                            compactView ? 'px-2 py-1 text-xs' : 'px-3 py-1 text-xs'
+                          }`}
+                        >
+                          {compactView ? '✗' : 'Không có mặt'}
+                        </button>
+                      </>
+                    )}
                   </div>
-                  
-                  {/* Pickup Mode Buttons */}
-                  {tripMode === 'pickup' && student.status === 'waiting' && (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleStudentStatus(student.id, 'picked')}
-                        className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs hover:bg-green-200 transition-colors"
-                      >
-                        Đã đón
-                      </button>
-                      <button
-                        onClick={() => handleStudentStatus(student.id, 'absent')}
-                        className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs hover:bg-red-200 transition-colors"
-                      >
-                        Vắng mặt
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Dropoff Mode Buttons */}
-                  {tripMode === 'dropoff' && student.status === 'picked' && (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleStudentStatus(student.id, 'dropped')}
-                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs hover:bg-blue-200 transition-colors"
-                      >
-                        Đã trả
-                      </button>
-                      <button
-                        onClick={() => handleStudentStatus(student.id, 'absent')}
-                        className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs hover:bg-red-200 transition-colors"
-                      >
-                        Không có mặt
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* Emergency Button */}
-      <div className="fixed bottom-6 right-6">
+      {/* Fixed Action Buttons */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+        {/* Emergency Button */}
         <button
           onClick={emergencyCall}
           className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg transition-colors"
@@ -345,6 +539,15 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
           aria-label="Gọi khẩn cấp - Số 113"
         >
           <Phone className="h-6 w-6" />
+        </button>
+        
+        {/* Quick Profile Button */}
+        <button
+          className="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-full shadow-lg transition-colors border border-gray-200"
+          title="Thông tin tài xế"
+          onClick={() => alert(`Tài xế: ${driverData.name}\nBằng lái: ${driverData.license || 'Chưa cập nhật'}\nSĐT: ${driverData.phone || 'Chưa cập nhật'}`)}
+        >
+          <Users className="h-5 w-5" />
         </button>
       </div>
 

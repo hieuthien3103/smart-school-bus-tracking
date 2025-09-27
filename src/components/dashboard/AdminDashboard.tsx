@@ -22,20 +22,19 @@ interface AdminDashboardProps {
 
 const AdminDashboard = ({ adminData }: AdminDashboardProps) => {
   // Get real data from context
-  const { busLocations, scheduleData, driversData } = useAppData();
+  const { busLocations, scheduleData, driversData, studentsData } = useAppData();
   
   // Calculate real-time stats from actual data with useMemo for proper re-rendering
   const dashboardStats = useMemo(() => ({
     totalBuses: busLocations.length,
     activeBuses: busLocations.filter(bus => bus.status === 'Đang di chuyển').length,
-    // Calculate total students from ALL schedules (not bus locations) 
-    // because one bus can have multiple schedules
-    totalStudents: scheduleData.reduce((sum, schedule) => sum + schedule.students, 0),
+    // Calculate total students from actual studentsData for accurate count
+    totalStudents: studentsData.length,
     totalDrivers: driversData.length,
     totalRoutes: scheduleData.length, // Total number of routes/schedules
     activeRoutes: scheduleData.filter(s => s.status === 'Hoạt động').length,
     totalAlerts: busLocations.filter(bus => bus.status === 'Sự cố').length
-  }), [busLocations, scheduleData, driversData]);
+  }), [busLocations, scheduleData, driversData, studentsData]);
 
 
 

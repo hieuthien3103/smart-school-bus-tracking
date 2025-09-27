@@ -15,7 +15,7 @@ import Modal from '../shared/Modal';
 import Form from '../shared/Form';
 
 import type { User, FormField } from '../../types';
-import { mockStudentsData, mockDriversData, mockBusesData } from '../../services/mockData';
+import { mockDriversData, mockBusesData } from '../../services/mockData';
 import { useAppData } from '../../contexts/AppDataContext';
 
 
@@ -31,7 +31,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     updateBusLocations, 
     syncBusLocationFromSchedule,
     scheduleData,
-    setScheduleData
+    setScheduleData,
+    studentsData: globalStudentsData,
+    addStudent,
+    updateStudent,
+    deleteStudent
   } = useAppData();
 
   // App state
@@ -44,16 +48,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   const [modalType, setModalType] = useState<'schedule' | 'student' | 'driver' | 'bus'>('schedule');
   const [editingItem, setEditingItem] = useState<any>(null);
   
-  // Transform data for management components
-  const [studentsData, setStudentsData] = useState(() => 
-    mockStudentsData.map(student => ({
-      id: student.id,
-      name: student.name,
-      class: student.grade,
-      route: student.bus,
-      status: student.status
-    }))
-  );
+  // Transform data for management components - use global data
+  const studentsData = globalStudentsData.map(student => ({
+    id: student.id,
+    name: student.name,
+    class: student.grade,    // Transform grade -> class for StudentManagement
+    route: student.bus,      // Transform bus -> route for StudentManagement
+    pickup: student.pickup,
+    dropoff: student.dropoff,
+    parent: student.parent,
+    phone: student.phone,
+    status: student.status
+  }));
   
   const [driversData, setDriversData] = useState(() => 
     mockDriversData.map(driver => ({
@@ -139,9 +145,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Cập nhật lịch trình thành công!');
             break;
           case 'student':
-            setStudentsData(prev => prev.map(item => 
-              item.id === editingItem.id ? { ...item, ...formData } : item
-            ));
+            // Convert AdminApp format to context format
+            const studentUpdate = {
+              name: formData.name,
+              grade: formData.grade,  // Use grade from form (not class)
+              bus: formData.bus,      // Use bus from form (not route)
+              pickup: formData.pickup || globalStudentsData.find(s => s.id === editingItem.id)?.pickup || '',
+              dropoff: formData.dropoff || globalStudentsData.find(s => s.id === editingItem.id)?.dropoff || '',
+              parent: formData.parent || globalStudentsData.find(s => s.id === editingItem.id)?.parent || '',
+              phone: formData.phone || globalStudentsData.find(s => s.id === editingItem.id)?.phone || '',
+              status: formData.status || globalStudentsData.find(s => s.id === editingItem.id)?.status || 'Chờ xe'
+            };
+            updateStudent(editingItem.id, studentUpdate);
             alert('Cập nhật học sinh thành công!');
             break;
           case 'driver':
@@ -186,7 +201,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Thêm lịch trình mới thành công!');
             break;
           case 'student':
-            setStudentsData(prev => [...prev, { id: newId, ...formData }]);
+            // Convert AdminApp format to context format
+            const newStudentData = {
+              name: formData.name,
+              grade: formData.grade || 'Lớp 6A',      // Use grade from form
+              bus: formData.bus || 'BS001',          // Use bus from form
+              pickup: formData.pickup || 'Chưa cập nhật địa chỉ đón',
+              dropoff: formData.dropoff || 'Trường học',
+              parent: formData.parent || 'Chưa cập nhật',
+              phone: formData.phone || '0900000000',
+              status: 'Chờ xe'  // Default status for new students
+            };
+            addStudent(newStudentData);
             alert('Thêm học sinh mới thành công!');
             break;
           case 'driver':
@@ -255,7 +281,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
           alert('Xóa lịch trình thành công!');
           break;
         case 'student':
-          setStudentsData(prev => prev.filter(item => item.id !== id));
+          deleteStudent(id);
           alert('Xóa học sinh thành công!');
           break;
         case 'driver':
@@ -364,15 +390,17 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             label: 'Tuyến đường', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn tuyến đường cho lịch trình',
             options: generateRouteOptions()
           },
-          { name: 'time', label: 'Thời gian khởi hành', type: 'time', required: true },
-          { name: 'students', label: 'Số học sinh dự kiến', type: 'number', required: true },
+          { name: 'time', label: 'Thời gian khởi hành', type: 'time', required: true, placeholder: 'VD: 07:30 (giờ bắt đầu chuyến)' },
+          { name: 'students', label: 'Số học sinh dự kiến', type: 'number', required: true, placeholder: 'VD: 25 (số học sinh trên chuyến)' },
           { 
             name: 'driver', 
             label: 'Tài xế', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn tài xế phụ trách',
             options: generateDriverOptions()
           },
           { 
@@ -380,12 +408,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             label: 'Xe buýt', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn xe buýt sử dụng',
             options: generateBusOptions()
           },
           { 
             name: 'status', 
             label: 'Trạng thái', 
             type: 'select', 
+            placeholder: 'Chọn trạng thái lịch trình',
             options: [
               { value: 'Hoạt động', label: '✅ Hoạt động' },
               { value: 'Tạm dừng', label: '⏸️ Tạm dừng' },
@@ -396,43 +426,46 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         ];
       case 'student':
         return [
-          { name: 'name', label: 'Họ tên', type: 'text', required: true },
-          { name: 'grade', label: 'Lớp', type: 'text', required: true },
+          { name: 'name', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Nguyễn Văn An' },
+          { name: 'grade', label: 'Lớp', type: 'text', required: true, placeholder: 'VD: Lớp 6A, Lớp 7B' },
           { 
             name: 'bus', 
             label: 'Xe buýt', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn xe buýt',
             options: generateBusOptions()
           },
-          { name: 'pickup', label: 'Điểm đón', type: 'text', required: true },
-          { name: 'dropoff', label: 'Điểm trả', type: 'text', required: true },
-          { name: 'parent', label: 'Phụ huynh', type: 'text', required: true },
-          { name: 'phone', label: 'Điện thoại', type: 'text', required: true }
+          { name: 'pickup', label: 'Điểm đón', type: 'text', required: true, placeholder: 'VD: 123 Đường ABC, Quận 1, TP.HCM' },
+          { name: 'dropoff', label: 'Điểm trả', type: 'text', required: true, placeholder: 'VD: Trường THCS XYZ, 456 Đường DEF' },
+          { name: 'parent', label: 'Phụ huynh', type: 'text', required: true, placeholder: 'VD: Nguyễn Thị Mẹ (Mẹ)' },
+          { name: 'phone', label: 'Điện thoại', type: 'text', required: true, placeholder: 'VD: 0901234567' }
         ];
       case 'driver':
         return [
-          { name: 'name', label: 'Họ tên', type: 'text', required: true },
-          { name: 'license', label: 'Bằng lái', type: 'text', required: true },
-          { name: 'phone', label: 'Điện thoại', type: 'text', required: true },
+          { name: 'name', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Trần Văn Tài Xế' },
+          { name: 'license', label: 'Bằng lái', type: 'text', required: true, placeholder: 'VD: D123456789 (Bằng lái hạng D)' },
+          { name: 'phone', label: 'Điện thoại', type: 'text', required: true, placeholder: 'VD: 0987654321' },
           { 
             name: 'bus', 
             label: 'Xe buýt phụ trách', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn xe buýt để phụ trách',
             options: generateBusOptions()
           },
-          { name: 'experience', label: 'Kinh nghiệm (năm)', type: 'number', required: true }
+          { name: 'experience', label: 'Kinh nghiệm (năm)', type: 'number', required: true, placeholder: 'VD: 5 (số năm kinh nghiệm lái xe)' }
         ];
       case 'bus':
         return [
-          { name: 'busNumber', label: 'Số xe', type: 'text', required: true },
-          { name: 'capacity', label: 'Sức chứa', type: 'number', required: true },
+          { name: 'busNumber', label: 'Số xe', type: 'text', required: true, placeholder: 'VD: BS001, XB-123.45' },
+          { name: 'capacity', label: 'Sức chứa', type: 'number', required: true, placeholder: 'VD: 45 (số ghế ngồi tối đa)' },
           { 
             name: 'currentDriver', 
             label: 'Tài xế phụ trách', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn tài xế phụ trách xe này',
             options: generateDriverOptions()
           },
           { 
@@ -440,9 +473,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             label: 'Tuyến đường', 
             type: 'select', 
             required: true,
+            placeholder: 'Chọn tuyến đường hoạt động',
             options: generateRouteOptions()
           },
-          { name: 'status', label: 'Trạng thái', type: 'select', options: [
+          { name: 'status', label: 'Trạng thái', type: 'select', placeholder: 'Chọn trạng thái hoạt động', options: [
             { value: 'Hoạt động', label: '✅ Hoạt động' },
             { value: 'Bảo trì', label: '🔧 Bảo trì' },
             { value: 'Ngừng hoạt động', label: '❌ Ngừng hoạt động' }
