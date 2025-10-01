@@ -184,10 +184,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             break;
         }
       } else {
-        // Add new item with unique ID
-        const newId = Date.now() + Math.random();
+        // Add new item with unique ID based on existing data
+        let newId: number;
         switch (modalType) {
           case 'schedule':
+            newId = Math.max(...scheduleData.map(s => s.id), 0) + 1;
             const newSchedule = {
               id: newId,
               route: formData.route,
@@ -216,6 +217,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Thêm học sinh mới thành công!');
             break;
           case 'driver':
+            newId = Math.max(...driversData.map(d => d.id), 0) + 1;
             const newDriver = {
               id: newId,
               name: formData.name,
@@ -231,6 +233,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Thêm tài xế mới thành công!');
             break;
           case 'bus':
+            newId = Math.max(...busesData.map(b => b.id), 0) + 1;
             const newBus = {
               id: newId,
               busNumber: formData.busNumber,

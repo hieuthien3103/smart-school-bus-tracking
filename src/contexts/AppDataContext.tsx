@@ -1,5 +1,5 @@
 // Global data context for Smart School Bus System
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { BusLocation, Schedule, Driver, Student } from '../types';
 import { mockBusLocations, mockScheduleData, mockDriversData, mockStudentsData } from '../services/mockData';
@@ -43,6 +43,20 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
   const [scheduleData, setScheduleData] = useState<Schedule[]>(mockScheduleData);
   const [driversData, setDriversData] = useState<Driver[]>(mockDriversData);
   const [studentsData, setStudentsData] = useState<Student[]>(mockStudentsData);
+
+  // Auto-sync schedule data whenever students data changes
+  useEffect(() => {
+    setScheduleData(prev => 
+      prev.map(schedule => {
+        // Count students assigned to this bus
+        const studentsInBus = studentsData.filter(student => student.bus === schedule.bus).length;
+        return {
+          ...schedule,
+          students: studentsInBus
+        };
+      })
+    );
+  }, [studentsData]);
 
   // Generate BusLocation from Bus data for tracking
   const generateBusLocationFromBus = useCallback((busData: any): BusLocation => {
