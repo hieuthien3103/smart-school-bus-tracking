@@ -42,8 +42,8 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
   const convertedStudents = contextStudents.map(student => ({
     id: student.id,
     name: student.name,
-    pickup: '07:15', // Default time, could be enhanced with real schedule data
-    dropoff: '16:30',
+    pickup: student.pickupTime, // ✅ Now using real pickup time
+    dropoff: student.dropoffTime, // ✅ Now using real dropoff time
     pickupAddress: student.pickup,
     dropoffAddress: student.dropoff,
     status: student.status === 'Đã lên xe' ? 'picked' : 
@@ -73,14 +73,8 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'waiting' | 'picked' | 'dropped' | 'absent'>('all');
   const [compactView, setCompactView] = useState(false);
 
-  // Use converted students from context, fallback to mock data if no context students
-  const [students, setStudents] = useState(
-    convertedStudents.length > 0 ? convertedStudents : [
-      { id: 1, name: 'Nguyễn Minh An', pickup: '07:15', dropoff: '16:30', pickupAddress: 'Ngã tư Láng Hạ', dropoffAddress: '123 Đường ABC', status: 'waiting', phone: '0901234567' },
-      { id: 2, name: 'Trần Thị Bình', pickup: '07:20', dropoff: '16:35', pickupAddress: 'Bưu điện Đống Đa', dropoffAddress: '456 Đường DEF', status: 'picked', phone: '0907654321' },
-      { id: 3, name: 'Lê Văn Cường', pickup: '07:25', dropoff: '16:40', pickupAddress: 'Trường THCS XYZ', dropoffAddress: '789 Đường GHI', status: 'waiting', phone: '0909876543' }
-    ]
-  );
+  // Use converted students from context - no fallback needed
+  const [students, setStudents] = useState(convertedStudents);
 
   // Route info from real data - combining bus location and schedule data
   const [routeInfo] = useState({
@@ -94,12 +88,19 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     totalStudents: currentSchedule?.students || currentBus?.students || 0
   });
 
-  // Sync students when context data changes
+  // Sync students when context data changes - always use context data
   useEffect(() => {
-    if (convertedStudents.length > 0) {
-      setStudents(convertedStudents);
-    }
+    setStudents(convertedStudents);
   }, [convertedStudents]);
+
+  // Debug log để kiểm tra dữ liệu
+  useEffect(() => {
+    console.log('🚌 DriverDashboard Debug Info:');
+    console.log('- Driver Name:', driverData.name);
+    console.log('- Current Bus:', currentBus);
+    console.log('- Context Students:', contextStudents);
+    console.log('- Converted Students:', convertedStudents);
+  }, [driverData.name, currentBus, contextStudents, convertedStudents]);
 
   // Simulation real-time updates with real data integration
   useEffect(() => {

@@ -2,7 +2,25 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { BusLocation, Schedule, Driver, Student } from '../types';
-import { mockBusLocations, mockScheduleData, mockDriversData, mockStudentsData } from '../services/mockData';
+import { mockBusLocations, mockScheduleData, mockDriversData, mockStudentsData, mockBusesData } from '../services/mockData';
+
+// AdminApp bus format
+interface AdminBusData {
+  id: number;
+  busNumber: string;
+  model: string;
+  capacity: number;
+  year: number;
+  plateNumber: string;
+  status: string;
+  currentDriver: string;
+  currentRoute: string;
+  mileage: number;
+  fuelLevel: number;
+  lastMaintenance: string;
+  nextMaintenance: string;
+  condition: string;
+}
 
 interface AppDataContextType {
   // Bus tracking data
@@ -16,7 +34,17 @@ interface AppDataContextType {
   
   // Driver data  
   driversData: Driver[];
-  setDriversData: (drivers: Driver[]) => void;
+  setDriversData: React.Dispatch<React.SetStateAction<Driver[]>>;
+  addDriver: (driver: Omit<Driver, 'id'>) => void;
+  updateDriver: (driverId: number, driver: Partial<Driver>) => void;
+  deleteDriver: (driverId: number) => void;
+  
+  // Bus data
+  busesData: AdminBusData[];
+  setBusesData: React.Dispatch<React.SetStateAction<AdminBusData[]>>;
+  addBus: (bus: Omit<AdminBusData, 'id'>) => void;
+  updateBus: (busId: number, bus: Partial<AdminBusData>) => void;
+  deleteBus: (busId: number) => void;
   
   // Students data
   studentsData: Student[];
@@ -43,6 +71,26 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
   const [scheduleData, setScheduleData] = useState<Schedule[]>(mockScheduleData);
   const [driversData, setDriversData] = useState<Driver[]>(mockDriversData);
   const [studentsData, setStudentsData] = useState<Student[]>(mockStudentsData);
+  
+  // Transform mock bus data to AdminApp format
+  const [busesData, setBusesData] = useState<AdminBusData[]>(() => 
+    mockBusesData.map(bus => ({
+      id: bus.id,
+      busNumber: bus.number,
+      model: 'Standard Bus',
+      capacity: bus.capacity,
+      year: 2020,
+      plateNumber: `${bus.number}-SCHOOL`,
+      status: bus.status,
+      currentDriver: bus.driver,
+      currentRoute: bus.route,
+      mileage: Math.floor(Math.random() * 100000),
+      fuelLevel: Math.floor(Math.random() * 100),
+      lastMaintenance: bus.lastMaintenance,
+      nextMaintenance: bus.nextMaintenance,
+      condition: 'Tốt'
+    }))
+  );
 
   // Auto-sync schedule data whenever students data changes
   useEffect(() => {
@@ -203,6 +251,50 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     setStudentsData(prev => prev.filter(s => s.id !== studentId));
   }, []);
 
+  // Driver CRUD operations
+  const addDriver = useCallback((driver: Omit<Driver, 'id'>) => {
+    setDriversData(prev => {
+      const newId = Math.max(...prev.map(d => d.id), 0) + 1;
+      return [...prev, { ...driver, id: newId }];
+    });
+  }, []);
+
+  const updateDriver = useCallback((driverId: number, driver: Partial<Driver>) => {
+    setDriversData(prev => 
+      prev.map(d => 
+        d.id === driverId 
+          ? { ...d, ...driver }
+          : d
+      )
+    );
+  }, []);
+
+  const deleteDriver = useCallback((driverId: number) => {
+    setDriversData(prev => prev.filter(d => d.id !== driverId));
+  }, []);
+
+  // Bus CRUD operations
+  const addBus = useCallback((bus: Omit<AdminBusData, 'id'>) => {
+    setBusesData(prev => {
+      const newId = Math.max(...prev.map(b => b.id), 0) + 1;
+      return [...prev, { ...bus, id: newId }];
+    });
+  }, []);
+
+  const updateBus = useCallback((busId: number, bus: Partial<AdminBusData>) => {
+    setBusesData(prev => 
+      prev.map(b => 
+        b.id === busId 
+          ? { ...b, ...bus }
+          : b
+      )
+    );
+  }, []);
+
+  const deleteBus = useCallback((busId: number) => {
+    setBusesData(prev => prev.filter(b => b.id !== busId));
+  }, []);
+
   const contextValue: AppDataContextType = {
     busLocations,
     setBusLocations,
@@ -211,6 +303,14 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     setScheduleData,
     driversData,
     setDriversData,
+    addDriver,
+    updateDriver,
+    deleteDriver,
+    busesData,
+    setBusesData,
+    addBus,
+    updateBus,
+    deleteBus,
     studentsData,
     setStudentsData,
     updateStudentStatus,

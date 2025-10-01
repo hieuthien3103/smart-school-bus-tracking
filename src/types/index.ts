@@ -43,6 +43,8 @@ export interface Student {
   bus: string;
   pickup: string;
   dropoff: string;
+  pickupTime: string;
+  dropoffTime: string;
   parent: string;
   phone: string;
   status: string;

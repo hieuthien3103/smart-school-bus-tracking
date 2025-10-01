@@ -15,7 +15,6 @@ import Modal from '../shared/Modal';
 import Form from '../shared/Form';
 
 import type { User, FormField } from '../../types';
-import { mockDriversData, mockBusesData } from '../../services/mockData';
 import { useAppData } from '../../contexts/AppDataContext';
 
 
@@ -35,7 +34,15 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     studentsData: globalStudentsData,
     addStudent,
     updateStudent,
-    deleteStudent
+    deleteStudent,
+    driversData: globalDriversData,
+    addDriver,
+    updateDriver,
+    deleteDriver,
+    busesData: globalBusesData,
+    addBus,
+    updateBus,
+    deleteBus
   } = useAppData();
 
   // App state
@@ -61,37 +68,20 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     status: student.status
   }));
   
-  const [driversData, setDriversData] = useState(() => 
-    mockDriversData.map(driver => ({
-      id: driver.id,
-      name: driver.name,
-      phone: driver.phone,
-      license: driver.license,
-      experience: parseInt(driver.experience.replace(' năm', '')) || 0,
-      status: driver.status,
-      currentRoute: driver.bus.replace('BS', 'Tuyến '),
-      currentBus: driver.bus
-    }))
-  );
+  // Transform global drivers data for AdminApp format
+  const driversData = globalDriversData.map(driver => ({
+    id: driver.id,
+    name: driver.name,
+    phone: driver.phone,
+    license: driver.license,
+    experience: parseInt(driver.experience.replace(' năm', '')) || 0,
+    status: driver.status,
+    currentRoute: driver.bus.replace('BS', 'Tuyến '),
+    currentBus: driver.bus
+  }));
   
-  const [busesData, setBusesData] = useState(() => 
-    mockBusesData.map(bus => ({
-      id: bus.id,
-      busNumber: bus.number,
-      model: 'Standard Bus',
-      capacity: bus.capacity,
-      year: 2020,
-      plateNumber: `${bus.number}-SCHOOL`,
-      status: bus.status,
-      currentDriver: bus.driver,
-      currentRoute: bus.route,
-      mileage: Math.floor(Math.random() * 100000),
-      fuelLevel: Math.floor(Math.random() * 100),
-      lastMaintenance: bus.lastMaintenance,
-      nextMaintenance: bus.nextMaintenance,
-      condition: 'Tốt'
-    }))
-  );
+  // Use global buses data directly
+  const busesData = globalBusesData;
 
   // Update current time
   React.useEffect(() => {
@@ -160,26 +150,25 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Cập nhật học sinh thành công!');
             break;
           case 'driver':
-            setDriversData(prev => prev.map(item => 
-              item.id === editingItem.id ? { 
-                ...item, 
-                ...formData,
-                experience: parseInt(formData.experience) || item.experience,
-
-                currentRoute: formData.bus?.replace('BS', 'Tuyến ') || item.currentRoute,
-                currentBus: formData.bus || item.currentBus
-              } : item
-            ));
+            // Convert back to Driver format and update in global context
+            const driverUpdate = {
+              name: formData.name,
+              phone: formData.phone, 
+              license: formData.license,
+              experience: `${parseInt(formData.experience) || 0} năm`,
+              status: formData.status,
+              bus: formData.bus || formData.currentBus
+            };
+            updateDriver(editingItem.id, driverUpdate);
             alert('Cập nhật tài xế thành công!');
             break;
           case 'bus':
-            setBusesData(prev => prev.map(item => 
-              item.id === editingItem.id ? { 
-                ...item, 
-                ...formData,
-                capacity: parseInt(formData.capacity) || item.capacity
-              } : item
-            ));
+            // Update bus in global context
+            const busUpdate = {
+              ...formData,
+              capacity: parseInt(formData.capacity) || editingItem.capacity
+            };
+            updateBus(editingItem.id, busUpdate);
             alert('Cập nhật xe buýt thành công!');
             break;
         }
@@ -202,15 +191,38 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Thêm lịch trình mới thành công!');
             break;
           case 'student':
+            // Helper function to generate default pickup/dropoff times based on bus
+            const generateDefaultTimes = (busNumber: string) => {
+              const basePickupTimes: { [key: string]: string } = {
+                'BS001': '07:15',
+                'BS002': '07:20', 
+                'BS003': '07:25'
+              };
+              const baseDropoffTimes: { [key: string]: string } = {
+                'BS001': '16:30',
+                'BS002': '16:35',
+                'BS003': '16:40'
+              };
+              return {
+                pickupTime: basePickupTimes[busNumber] || '07:15',
+                dropoffTime: baseDropoffTimes[busNumber] || '16:30'
+              };
+            };
+
+            const selectedBus = formData.bus || 'BS001';
+            const defaultTimes = generateDefaultTimes(selectedBus);
+
             // Convert AdminApp format to context format
             const newStudentData = {
               name: formData.name,
               grade: formData.grade || 'Lớp 6A',      // Use grade from form
-              bus: formData.bus || 'BS001',          // Use bus from form
+              bus: selectedBus,                       // Use bus from form
               pickup: formData.pickup || 'Chưa cập nhật địa chỉ đón',
               dropoff: formData.dropoff || 'Trường học',
               parent: formData.parent || 'Chưa cập nhật',
               phone: formData.phone || '0900000000',
+              pickupTime: defaultTimes.pickupTime,    // Add required pickup time
+              dropoffTime: defaultTimes.dropoffTime,  // Add required dropoff time
               status: 'Chờ xe'  // Default status for new students
             };
             addStudent(newStudentData);
@@ -218,39 +230,37 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             break;
           case 'driver':
             newId = Math.max(...driversData.map(d => d.id), 0) + 1;
+            // Convert to Driver format for global context
             const newDriver = {
-              id: newId,
               name: formData.name,
               phone: formData.phone,
               license: formData.license,
-              experience: parseInt(formData.experience) || 0,
+              experience: `${parseInt(formData.experience) || 0} năm`,
               status: 'Đang hoạt động',
-              currentRoute: formData.bus?.replace('BS', 'Tuyến ') || '',
-              currentBus: formData.bus
-
+              bus: formData.bus || 'BS001',
+              rating: 5.0
             };
-            setDriversData(prev => [...prev, newDriver]);
+            addDriver(newDriver);
             alert('Thêm tài xế mới thành công!');
             break;
           case 'bus':
-            newId = Math.max(...busesData.map(b => b.id), 0) + 1;
+            // Add bus using global context
             const newBus = {
-              id: newId,
               busNumber: formData.busNumber,
               model: 'Standard Bus',
               capacity: parseInt(formData.capacity) || 0,
               year: 2024,
               plateNumber: `${formData.busNumber}-SCHOOL`,
-              status: formData.status,
-              currentDriver: formData.currentDriver,  
-              currentRoute: formData.currentRoute,
+              status: 'Đang hoạt động',
+              currentDriver: '',
+              currentRoute: '',
               mileage: 0,
               fuelLevel: 100,
-              lastMaintenance: new Date().toISOString().split('T')[0],
-              nextMaintenance: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              lastMaintenance: new Date().toLocaleDateString('vi-VN'),
+              nextMaintenance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'),
               condition: 'Tốt'
             };
-            setBusesData(prev => [...prev, newBus]);
+            addBus(newBus);
             alert('Thêm xe buýt mới thành công!');
             break;
         }
@@ -288,11 +298,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
           alert('Xóa học sinh thành công!');
           break;
         case 'driver':
-          setDriversData(prev => prev.filter(item => item.id !== id));
+          deleteDriver(id);
           alert('Xóa tài xế thành công!');
           break;
         case 'bus':
-          setBusesData(prev => prev.filter(item => item.id !== id));
+          deleteBus(id);
           alert('Xóa xe buýt thành công!');
           break;
       }

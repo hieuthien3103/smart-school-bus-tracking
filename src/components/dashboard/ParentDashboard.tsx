@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Clock, User, Bus, Route, Phone, AlertCircle } from 'lucide-react';
+import { useAppData } from '../../contexts/AppDataContext';
 
 interface StudentInfo {
   id: number;
@@ -27,44 +28,70 @@ interface BusLocationInfo {
 }
 
 const ParentDashboard = () => {
-  const [studentInfo] = useState<StudentInfo>({
-    id: 1,
-    name: 'Nguyễn Minh An',
-    grade: 'Lớp 7A',
-    busNumber: 'BS001',
-    driverName: 'Nguyễn Văn Đức',
-    driverPhone: '0123456789',
-    pickupStop: 'Ngã tư Trần Duy Hưng',
-    dropoffStop: 'Trường THCS Giảng Võ',
-    pickupTime: '7:15 AM',
+  // Get real data from global context
+  const { studentsData, busLocations, scheduleData, driversData } = useAppData();
+  
+  // For demo purposes, we'll show data for the first student
+  // In a real app, this would be filtered by parent's children
+  const currentStudent = studentsData[0] || null;
+  
+  // Get corresponding bus and driver data
+  const currentBus = currentStudent ? busLocations.find(bus => bus.busNumber === currentStudent.bus) : null;
+  const currentSchedule = currentStudent ? scheduleData.find(schedule => schedule.bus === currentStudent.bus) : null;
+  const currentDriver = currentStudent ? driversData.find(driver => driver.bus === currentStudent.bus) : null;
+
+  // Convert to StudentInfo format for compatibility
+  const studentInfo: StudentInfo | null = currentStudent ? {
+    id: currentStudent.id,
+    name: currentStudent.name,
+    grade: currentStudent.grade,
+    busNumber: currentStudent.bus,
+    driverName: currentDriver?.name || currentBus?.driver || 'N/A',
+    driverPhone: currentDriver?.phone || '0123456789',
+    pickupStop: currentStudent.pickup,
+    dropoffStop: currentStudent.dropoff,
+    pickupTime: currentSchedule?.time || '7:15 AM',
     dropoffTime: '4:30 PM',
-    currentStatus: 'waiting_pickup'
-  });
+    currentStatus: currentStudent.status === 'Đã lên xe' ? 'on_bus' : 
+                  currentStudent.status === 'Đã xuống xe' ? 'at_school' :
+                  'waiting_pickup'
+  } : null;
 
   const [busLocation, setBusLocation] = useState<BusLocationInfo>({
-    busNumber: 'BS001',
-    currentLocation: 'Đường Láng Hạ',
+    busNumber: currentStudent?.bus || 'BS001',
+    currentLocation: currentBus?.route || 'Đường Láng Hạ',
     distanceToPickup: 0.8,
     distanceToDropoff: 5.2,
-    estimatedPickupTime: '7:15 AM',
+    estimatedPickupTime: currentSchedule?.time || '7:15 AM',
     estimatedDropoffTime: '4:30 PM',
     isOnRoute: true,
     lastUpdated: 'Vừa cập nhật'
   });
 
-  // Simulate real-time updates
+  // Update bus location based on real data
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (currentBus) {
       setBusLocation(prev => ({
         ...prev,
-        distanceToPickup: Math.max(0, prev.distanceToPickup - 0.1),
-        distanceToDropoff: Math.max(0, prev.distanceToDropoff - 0.1),
-        lastUpdated: 'Vừa cập nhật'
+        busNumber: currentBus.busNumber,
+        currentLocation: currentBus.route || prev.currentLocation,
+        isOnRoute: currentBus.status === 'Đang di chuyển',
+        lastUpdated: currentBus.lastUpdate
       }));
-    }, 10000);
+    }
+  }, [currentBus]);
 
-    return () => clearInterval(interval);
-  }, []);
+  // Early return if no student data
+  if (!studentInfo) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2">Chào mừng, Phụ huynh! 👋</h1>
+          <p className="text-blue-100">Không tìm thấy thông tin học sinh</p>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusInfo = (status: string) => {
     switch (status) {
