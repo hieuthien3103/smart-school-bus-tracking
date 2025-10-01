@@ -93,15 +93,6 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     setStudents(convertedStudents);
   }, [convertedStudents]);
 
-  // Debug log để kiểm tra dữ liệu
-  useEffect(() => {
-    console.log('🚌 DriverDashboard Debug Info:');
-    console.log('- Driver Name:', driverData.name);
-    console.log('- Current Bus:', currentBus);
-    console.log('- Context Students:', contextStudents);
-    console.log('- Converted Students:', convertedStudents);
-  }, [driverData.name, currentBus, contextStudents, convertedStudents]);
-
   // Simulation real-time updates with real data integration
   useEffect(() => {
     const interval = setInterval(() => {
