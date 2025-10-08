@@ -35,6 +35,17 @@ const testConnection = async () => {
 };
 
 // Execute query with error handling
+const query = async (sql, params = []) => {
+  try {
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  }
+};
+
+// Execute query with result object
 const executeQuery = async (query, params = []) => {
   try {
     const [rows] = await pool.execute(query, params);
@@ -76,6 +87,7 @@ const closePool = async () => {
 
 module.exports = {
   pool,
+  query,
   testConnection,
   executeQuery,
   executeTransaction,

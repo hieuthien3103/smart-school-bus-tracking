@@ -6,13 +6,10 @@ const router = express.Router();
 // Lấy tất cả drivers
 router.get('/', async (req, res) => {
   try {
+    // Query đơn giản trước để test
     const drivers = await query(`
-      SELECT d.*, u.name, u.email, u.phone, b.license_plate 
-      FROM drivers d 
-      JOIN users u ON d.user_id = u.id 
-      LEFT JOIN buses b ON d.bus_id = b.id 
-      WHERE u.status = 'active'
-      ORDER BY u.name
+      SELECT * FROM drivers 
+      ORDER BY id
     `);
 
     res.json({
@@ -24,7 +21,8 @@ router.get('/', async (req, res) => {
     console.error('Get drivers error:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi server nội bộ'
+      message: 'Lỗi server nội bộ',
+      error: error.message
     });
   }
 });

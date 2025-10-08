@@ -6,33 +6,11 @@ const router = express.Router();
 // Lấy tất cả buses
 router.get('/', async (req, res) => {
   try {
-    const { status, schoolId, page = 1, limit = 10 } = req.query;
-    
-    let sql = `
-      SELECT b.*, s.name as school_name, d.name as driver_name 
-      FROM buses b 
-      LEFT JOIN schools s ON b.school_id = s.id 
-      LEFT JOIN drivers dr ON b.id = dr.bus_id 
-      LEFT JOIN users d ON dr.user_id = d.id 
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (status) {
-      sql += ' AND b.status = ?';
-      params.push(status);
-    }
-
-    if (schoolId) {
-      sql += ' AND b.school_id = ?';
-      params.push(schoolId);
-    }
-
-    const offset = (page - 1) * limit;
-    sql += ' ORDER BY b.license_plate LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
-
-    const buses = await query(sql, params);
+    // Query đơn giản trước để test
+    const buses = await query(`
+      SELECT * FROM buses 
+      ORDER BY id
+    `);
 
     res.json({
       success: true,
@@ -43,7 +21,8 @@ router.get('/', async (req, res) => {
     console.error('Get buses error:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi server nội bộ'
+      message: 'Lỗi server nội bộ',
+      error: error.message
     });
   }
 });

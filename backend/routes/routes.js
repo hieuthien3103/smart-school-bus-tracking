@@ -6,11 +6,10 @@ const router = express.Router();
 // Lấy tất cả routes
 router.get('/', async (req, res) => {
   try {
+    // Query đơn giản trước để test
     const routes = await query(`
-      SELECT r.*, s.name as school_name 
-      FROM routes r 
-      LEFT JOIN schools s ON r.school_id = s.id 
-      ORDER BY r.name
+      SELECT * FROM routes 
+      ORDER BY id
     `);
 
     res.json({
@@ -22,7 +21,8 @@ router.get('/', async (req, res) => {
     console.error('Get routes error:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi server nội bộ'
+      message: 'Lỗi server nội bộ',
+      error: error.message
     });
   }
 });
