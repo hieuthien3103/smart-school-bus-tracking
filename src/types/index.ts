@@ -5,7 +5,11 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'parent' | 'driver';
+  permissions?: string[];  // Added permissions property for API integration
   avatar?: string;
+  phone?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BusLocation {

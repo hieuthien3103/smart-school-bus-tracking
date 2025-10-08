@@ -133,8 +133,7 @@ const Reports = () => {
                         route.efficiency >= 90 ? 'bg-green-500' : 
                         route.efficiency >= 80 ? 'bg-yellow-500' : 'bg-red-500'
                       }`}
-                      // CSS variable for dynamic width - acceptable inline style
-                      style={{'--progress-width': `${route.efficiency}%`} as React.CSSProperties & { '--progress-width': string }}
+                      style={{ width: `${route.efficiency}%` }}
                     ></div>
                   </div>
                 </div>
@@ -221,8 +220,7 @@ const Reports = () => {
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {/* CSS variable for dynamic color - acceptable inline style */}
-                      <div className="w-3 h-3 rounded-full mr-3" style={{'--bg-color': item.color} as React.CSSProperties & { '--bg-color': string }}></div>
+                      <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: item.color }}></div>
                       <div className="text-sm font-medium text-gray-900">{item.type}</div>
                     </div>
                   </td>
@@ -273,8 +271,7 @@ const Reports = () => {
                             driver.onTime >= 95 ? 'bg-green-500' : 
                             driver.onTime >= 90 ? 'bg-yellow-500' : 'bg-red-500'
                           }`}
-                          // CSS variable for dynamic width - acceptable inline style
-                          style={{'--progress-width': `${driver.onTime}%`} as React.CSSProperties & { '--progress-width': string }}
+                          style={{ width: `${driver.onTime}%` }}
                         ></div>
                       </div>
                       <span className="text-sm text-gray-900">{driver.onTime}%</span>
@@ -380,7 +377,7 @@ const Reports = () => {
                   onClick={() => setSelectedReport(type.id)}
                   className={`flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${
                     selectedReport === type.id
-                      ? `bg-${type.color}-100 text-${type.color}-700 border border-${type.color}-200`
+                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
                       : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                   }`}
                 >
