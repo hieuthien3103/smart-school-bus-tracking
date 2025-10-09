@@ -3,6 +3,10 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import type { ReactNode } from 'react';
 import type { BusLocation, Schedule, Driver, Student } from '../types';
 import { mockBusLocations, mockScheduleData, mockDriversData, mockStudentsData, mockBusesData } from '../services/mockData';
+import { busService } from '../services/api/busService';
+import { driverService } from '../services/api/driverService';
+import { studentService } from '../services/api/studentService';
+import { scheduleService } from '../services/api/scheduleService';
 
 // AdminApp bus format
 interface AdminBusData {
@@ -55,6 +59,10 @@ interface AppDataContextType {
   updateStudent: (studentId: number, student: Partial<Student>) => void;
   deleteStudent: (studentId: number) => void;
   
+  // Loading and error states
+  isLoading: boolean;
+  error: string | null;
+  
   // Sync functions
   syncBusLocationFromSchedule: (schedules: Schedule[]) => void;
   generateBusLocationFromBus: (busData: any) => BusLocation;
@@ -67,44 +75,190 @@ interface AppDataProviderProps {
 }
 
 export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) => {
-  const [busLocations, setBusLocations] = useState<BusLocation[]>(mockBusLocations);
-  const [scheduleData, setScheduleData] = useState<Schedule[]>(mockScheduleData);
-  const [driversData, setDriversData] = useState<Driver[]>(mockDriversData);
-  const [studentsData, setStudentsData] = useState<Student[]>(mockStudentsData);
-  
-  // Transform mock bus data to AdminApp format
-  const [busesData, setBusesData] = useState<AdminBusData[]>(() => 
-    mockBusesData.map(bus => ({
-      id: bus.id,
-      busNumber: bus.number,
-      model: 'Standard Bus',
-      capacity: bus.capacity,
-      year: 2020,
-      plateNumber: `${bus.number}-SCHOOL`,
-      status: bus.status,
-      currentDriver: bus.driver,
-      currentRoute: bus.route,
-      mileage: Math.floor(Math.random() * 100000),
-      fuelLevel: Math.floor(Math.random() * 100),
-      lastMaintenance: bus.lastMaintenance,
-      nextMaintenance: bus.nextMaintenance,
-      condition: 'Tốt'
-    }))
-  );
+  // Initialize with empty arrays, will load from API
+  const [busLocations, setBusLocations] = useState<BusLocation[]>([]);
+  const [scheduleData, setScheduleData] = useState<Schedule[]>([]);
+  const [driversData, setDriversData] = useState<Driver[]>([]);
+  const [studentsData, setStudentsData] = useState<Student[]>([]);
+  const [busesData, setBusesData] = useState<AdminBusData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Auto-sync schedule data whenever students data changes
+  // Load initial data from API
   useEffect(() => {
-    setScheduleData(prev => 
-      prev.map(schedule => {
-        // Count students assigned to this bus
-        const studentsInBus = studentsData.filter(student => student.bus === schedule.bus).length;
-        return {
-          ...schedule,
-          students: studentsInBus
-        };
-      })
-    );
-  }, [studentsData]);
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Load all data in parallel
+        const [buses, drivers, students, schedules] = await Promise.all([
+          busService.getBuses().catch(() => []),
+          driverService.getDrivers().catch(() => ({ data: [], total: 0, page: 1, totalPages: 1 })),
+          studentService.getStudents().catch(() => ({ data: [], total: 0, page: 1, totalPages: 1 })),
+          scheduleService.getAllSchedules().catch(() => [])
+        ]);
+
+        // Set drivers data (convert API format to expected format)
+        const driversArray = Array.isArray(drivers) ? (drivers as any[]).map((driver: any) => ({
+          id: driver.id,
+          name: driver.user_id || `Tài xế ${driver.id}`,
+          phone: driver.emergency_contact_phone || 'Chưa có SĐT',
+          license: driver.license_number || 'Chưa có GPLX',
+          experience: `${driver.experience_years || 0} năm`,
+          status: driver.status === 'active' ? 'Hoạt động' : 'Nghỉ việc',
+          bus: `BS${String(driver.current_bus_id || '000').padStart(3, '0')}`,
+          hire_date: driver.hire_date ? new Date(driver.hire_date).toLocaleDateString('vi-VN') : 'Không rõ'
+        })) : (drivers as any)?.data?.map((driver: any) => ({
+          id: driver.id,
+          name: driver.user_id || `Tài xế ${driver.id}`,
+          phone: driver.emergency_contact_phone || 'Chưa có SĐT',
+          license: driver.license_number || 'Chưa có GPLX',
+          experience: `${driver.experience_years || 0} năm`,
+          status: driver.status === 'active' ? 'Hoạt động' : 'Nghỉ việc',
+          bus: `BS${String(driver.current_bus_id || '000').padStart(3, '0')}`,
+          hire_date: driver.hire_date ? new Date(driver.hire_date).toLocaleDateString('vi-VN') : 'Không rõ'
+        })) || [];
+        setDriversData(driversArray);
+        
+        // Set students data
+        const studentsArray = Array.isArray(students) ? students as any[] : (students as any)?.data || [];
+        setStudentsData(studentsArray);
+        
+        // Transform schedules to match the expected format
+        const schedulesArray = Array.isArray(schedules) ? (schedules as any[]).map((schedule: any) => ({
+          id: schedule.id,
+          route: schedule.route,
+          time: schedule.departure || schedule.time || '07:00',
+          students: schedule.students || 0,
+          driver: schedule.driver,
+          bus: schedule.bus,
+          status: schedule.status
+        })) : [];
+        setScheduleData(schedulesArray);
+
+        // Transform bus data to AdminApp format and set
+        const transformedBuses = Array.isArray(buses) ? (buses as any[]).map((bus: any) => ({
+          id: bus.id,
+          busNumber: bus.bus_number || bus.license_plate || `BUS${bus.id}`,
+          model: bus.model || 'Standard Bus',
+          capacity: bus.capacity || 30,
+          year: bus.year_manufactured || 2020,
+          plateNumber: bus.license_plate || `${bus.bus_number}-SCHOOL`,
+          status: bus.status === 'active' ? 'Hoạt động' : 'Không hoạt động',
+          currentDriver: 'Chưa phân công', // Will be updated from drivers data
+          currentRoute: 'Chưa phân tuyến', // Will be updated from routes data
+          mileage: Math.floor(Math.random() * 100000), // Mock data until we have real mileage
+          fuelLevel: Math.floor(Math.random() * 100), // Mock data until we have real fuel level
+          lastMaintenance: bus.last_maintenance_date ? 
+            new Date(bus.last_maintenance_date).toLocaleDateString('vi-VN') : '2024-01-15',
+          nextMaintenance: bus.next_maintenance_date ? 
+            new Date(bus.next_maintenance_date).toLocaleDateString('vi-VN') : '2024-04-15',
+          condition: 'Tốt'
+        })) : [];
+        
+        // Update buses with driver assignments
+        const busesWithDrivers = transformedBuses.map(bus => {
+          const assignedDriver = driversArray.find((driver: any) => 
+            driver.bus === bus.busNumber || 
+            driver.bus === `BS${String(bus.id).padStart(3, '0')}`
+          );
+          return {
+            ...bus,
+            currentDriver: assignedDriver ? assignedDriver.name : 'Chưa phân công'
+          };
+        });
+        
+        setBusesData(busesWithDrivers);
+
+        // Generate bus locations from bus data with all required properties
+        const locations: BusLocation[] = busesWithDrivers.map(bus => ({
+          id: bus.id,
+          busNumber: bus.busNumber,
+          driver: bus.currentDriver,
+          route: bus.currentRoute,
+          lat: 21.0285 + (Math.random() - 0.5) * 0.01, // Random location around Hanoi
+          lng: 105.8542 + (Math.random() - 0.5) * 0.01,
+          speed: bus.status === 'Hoạt động' ? Math.floor(Math.random() * 40) : 0,
+          direction: Math.floor(Math.random() * 360),
+          status: bus.status === 'Hoạt động' ? 'Đang di chuyển' : 'Dừng đón khách',
+          students: Math.floor(Math.random() * bus.capacity),
+          lastUpdate: new Date().toLocaleString('vi-VN'),
+          nextStop: 'Điểm đón tiếp theo',
+          estimatedArrival: '5 phút',
+          routeStops: ['Điểm đón 1', 'Điểm đón 2', 'Trường học'],
+          currentStopIndex: 0,
+          studentsOnBoard: Math.floor(Math.random() * bus.capacity),
+          emergencyAlert: false
+        }));
+        
+        // Remove duplicates by ID before setting
+        const uniqueLocations = locations.filter((location, index, self) => 
+          index === self.findIndex(l => l.id === location.id)
+        );
+        
+        console.log('Setting bus locations:', uniqueLocations.length, 'unique buses');
+        setBusLocations(uniqueLocations);
+
+      } catch (err) {
+        console.error('Error loading initial data:', err);
+        setError('Không thể tải dữ liệu. Sử dụng dữ liệu mặc định.');
+        
+        // Fallback to mock data on error
+        setBusLocations(mockBusLocations);
+        setScheduleData(mockScheduleData);
+        setDriversData(mockDriversData);
+        setStudentsData(mockStudentsData);
+        setBusesData(mockBusesData.map(bus => ({
+          id: bus.id,
+          busNumber: bus.number,
+          model: 'Standard Bus',
+          capacity: bus.capacity,
+          year: 2020,
+          plateNumber: `${bus.number}-SCHOOL`,
+          status: bus.status,
+          currentDriver: bus.driver,
+          currentRoute: bus.route,
+          mileage: Math.floor(Math.random() * 100000),
+          fuelLevel: Math.floor(Math.random() * 100),
+          lastMaintenance: bus.lastMaintenance,
+          nextMaintenance: bus.nextMaintenance,
+          condition: 'Tốt'
+        })));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, []); // Run once on mount
+
+  // Auto-sync schedule data whenever students data changes (only if not already loading)
+  useEffect(() => {
+    if (!isLoading && studentsData.length > 0 && scheduleData.length > 0) {
+      setScheduleData(prev => {
+        const updated = prev.map(schedule => {
+          // Count students assigned to this bus
+          const studentsInBus = studentsData.filter(student => student.bus === schedule.bus).length;
+          // Only update if the count has changed
+          if (schedule.students !== studentsInBus) {
+            return {
+              ...schedule,
+              students: studentsInBus
+            };
+          }
+          return schedule;
+        });
+        
+        // Only update state if something actually changed
+        const hasChanges = updated.some((schedule, index) => 
+          !prev[index] || schedule.students !== prev[index].students
+        );
+        
+        return hasChanges ? updated : prev;
+      });
+    }
+  }, [studentsData, isLoading]); // Remove scheduleData from dependencies to prevent loops
 
   // Generate BusLocation from Bus data for tracking
   const generateBusLocationFromBus = useCallback((busData: any): BusLocation => {
@@ -135,7 +289,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       const merged = [...prev];
       
       newBusLocations.forEach(newBus => {
-        const existingIndex = merged.findIndex(bus => bus.busNumber === newBus.busNumber);
+        const existingIndex = merged.findIndex(bus => bus.id === newBus.id);
         if (existingIndex >= 0) {
           // Update existing bus but preserve some dynamic data
           merged[existingIndex] = {
@@ -151,12 +305,21 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         }
       });
       
-      // Remove buses that no longer exist
-      return merged.filter(bus => 
+      // Remove buses that no longer exist and ensure no duplicates
+      const filtered = merged.filter(bus => 
         newBuses.some(newBus => 
+          (newBus.id || newBus.busNumber || newBus.number) === bus.id ||
           (newBus.busNumber || newBus.number) === bus.busNumber
         )
       );
+      
+      // Final duplicate removal by ID
+      const uniqueFiltered = filtered.filter((bus, index, self) => 
+        index === self.findIndex(b => b.id === bus.id)
+      );
+      
+      console.log('UpdateBusLocations:', merged.length, '->', uniqueFiltered.length, 'buses');
+      return uniqueFiltered;
     });
   }, [generateBusLocationFromBus]);
 
@@ -181,7 +344,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       // Add new buses from schedules that don't exist in busLocations yet
       const newBuses: BusLocation[] = [];
       schedules.forEach(schedule => {
-        const existingBus = prev.find(bus => bus.busNumber === schedule.bus);
+        const existingBus = updatedBuses.find(bus => 
+          bus.busNumber === schedule.bus || bus.id === schedule.id
+        );
         if (!existingBus) {
           // Create new BusLocation from schedule
           const newBusLocation: BusLocation = {
@@ -205,7 +370,15 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         }
       });
 
-      return [...updatedBuses, ...newBuses];
+      const combined = [...updatedBuses, ...newBuses];
+      
+      // Final duplicate removal by ID
+      const uniqueCombined = combined.filter((bus, index, self) => 
+        index === self.findIndex(b => b.id === bus.id)
+      );
+      
+      console.log('SyncBusLocationFromSchedule:', combined.length, '->', uniqueCombined.length, 'buses');
+      return uniqueCombined;
     });
   }, []);
 
@@ -318,6 +491,8 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     addStudent,
     updateStudent,
     deleteStudent,
+    isLoading,
+    error,
     syncBusLocationFromSchedule,
     generateBusLocationFromBus
   };

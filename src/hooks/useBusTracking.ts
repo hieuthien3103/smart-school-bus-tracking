@@ -55,12 +55,24 @@ export const useBusTracking = () => {
     );
   }, [busLocations, searchQuery]);
 
-  // Filtered buses (stable filtering)
+  // Filtered buses (stable filtering) - ensure unique IDs
   const filteredBuses = useMemo(() => {
-    if (filterStatus === 'all') return busLocations;
-    return busLocations.filter(bus => 
+    let buses = filterStatus === 'all' ? busLocations : busLocations.filter(bus => 
       bus.status.toLowerCase().includes(filterStatus.toLowerCase())
     );
+    
+    // Debug log to check for duplicates
+    console.log('Original buses count:', buses.length);
+    const uniqueBuses = buses.filter((bus, index, self) => 
+      index === self.findIndex(b => b.id === bus.id)
+    );
+    console.log('Unique buses count:', uniqueBuses.length);
+    
+    if (buses.length !== uniqueBuses.length) {
+      console.warn('Found duplicate bus IDs in data!');
+    }
+    
+    return uniqueBuses;
   }, [busLocations, filterStatus]);
 
   // Search handlers

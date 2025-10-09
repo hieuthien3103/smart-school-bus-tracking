@@ -54,9 +54,13 @@ const LocationTracking = () => {
     setSelectedBus(selectedBus === busId ? null : busId);
   }, [selectedBus, setSelectedBus]);
 
-  // Map view component
-  const MapView = () => (
-    <div className="relative bg-gradient-to-br from-blue-50 to-green-50 rounded-xl h-96 overflow-hidden border-2 border-dashed border-gray-300">
+  // Map View Component
+  const MapView = () => {
+    // Debug log to check for duplicates in render
+    console.log('MapView rendering with buses:', filteredBuses.map(b => ({ id: b.id, busNumber: b.busNumber })));
+    
+    return (
+      <div className="relative bg-gradient-to-br from-blue-50 to-green-50 h-96 rounded-lg border-2 border-dashed border-gray-300">
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
           <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -70,7 +74,7 @@ const LocationTracking = () => {
         const isSearched = searchResults.some(result => result.id === bus.id) && searchQuery.trim() !== '';
         return (
           <div
-            key={bus.id}
+            key={`map-marker-${bus.id}`}
             className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transform transition-all hover:scale-110 ${
               bus.status === 'Đang di chuyển' ? 'bg-green-500' :
               bus.status === 'Dừng đón khách' ? 'bg-blue-500' :
@@ -86,7 +90,8 @@ const LocationTracking = () => {
         );
       })}
     </div>
-  );
+    );
+  };
 
   // Calculate real-time stats
   const totalBuses = busLocations.length;
@@ -300,7 +305,7 @@ const LocationTracking = () => {
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {filteredBuses.map((bus) => (
                     <BusCard
-                      key={bus.id}
+                      key={`bus-card-${bus.id}`}
                       bus={bus}
                       isSelected={selectedBus === bus.id}
                       onSelect={handleBusSelect}

@@ -1,53 +1,71 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Download, FileText, 
   TrendingUp, Users, DollarSign, AlertTriangle,
-  PrinterIcon, Mail, Share2, Settings, RefreshCw
+  Printer, Mail, Share2, Settings, RefreshCw
 } from 'lucide-react';
 import { 
   Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, Legend, Tooltip,
   ComposedChart
 } from 'recharts';
+import { reportsService } from '../../services/api/reportsService';
+import type { 
+  PerformanceData, 
+  RouteAnalysis, 
+  MaintenanceData, 
+  DriverPerformance, 
+  ReportStats 
+} from '../../services/api/reportsService';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('performance');
   const [dateRange, setDateRange] = useState('this-month');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Mock data for reports
-  const performanceData = [
-    { month: 'T1', trips: 1240, onTime: 92, students: 2340, fuel: 1850, cost: 41500000 },
-    { month: 'T2', trips: 1180, onTime: 88, students: 2280, fuel: 1720, cost: 38600000 },
-    { month: 'T3', trips: 1350, onTime: 94, students: 2520, fuel: 1920, cost: 43200000 },
-    { month: 'T4', trips: 1280, onTime: 91, students: 2410, fuel: 1840, cost: 41300000 },
-    { month: 'T5', trips: 1420, onTime: 96, students: 2680, fuel: 2010, cost: 45100000 },
-    { month: 'T6', trips: 1380, onTime: 93, students: 2590, fuel: 1960, cost: 44000000 }
-  ];
+  // State for real data
+  const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
+  const [routeAnalysis, setRouteAnalysis] = useState<RouteAnalysis[]>([]);
+  const [maintenanceData, setMaintenanceData] = useState<MaintenanceData[]>([]);
+  const [driverPerformance, setDriverPerformance] = useState<DriverPerformance[]>([]);
+  const [reportStats, setReportStats] = useState<ReportStats>({
+    totalTrips: 0,
+    activeStudents: 0,
+    totalRevenue: 0,
+    onTimePercentage: 0,
+    totalBuses: 0,
+    activeDrivers: 0
+  });
 
-  const routeAnalysis = [
-    { route: 'Tuyến A', efficiency: 92, cost: 8500000, distance: 245, students: 156 },
-    { route: 'Tuyến B', efficiency: 88, cost: 7200000, distance: 198, students: 134 },
-    { route: 'Tuyến C', efficiency: 95, cost: 9800000, distance: 287, students: 178 },
-    { route: 'Tuyến D', efficiency: 85, cost: 6900000, distance: 167, students: 112 },
-    { route: 'Tuyến E', efficiency: 90, cost: 8100000, distance: 223, students: 145 }
-  ];
+  // Load data when component mounts or date range changes
+  useEffect(() => {
+    loadReportData();
+  }, [dateRange]);
 
-  const maintenanceData = [
-    { type: 'Bảo trì định kỳ', count: 24, cost: 12500000, color: '#3b82f6' },
-    { type: 'Sửa chữa khẩn cấp', count: 8, cost: 8900000, color: '#ef4444' },
-    { type: 'Thay thế phụ tùng', count: 15, cost: 15600000, color: '#f59e0b' },
-    { type: 'Kiểm tra an toàn', count: 32, cost: 6700000, color: '#10b981' }
-  ];
+  const loadReportData = async () => {
+    setIsLoading(true);
+    try {
+      const [performance, routes, maintenance, drivers, stats] = await Promise.all([
+        reportsService.getPerformanceData(),
+        reportsService.getRouteAnalysis(),
+        reportsService.getMaintenanceData(),
+        reportsService.getDriverPerformance(),
+        reportsService.getReportStats()
+      ]);
 
-  const driverPerformance = [
-    { name: 'Nguyễn Văn A', trips: 145, onTime: 96, rating: 4.8, violations: 0 },
-    { name: 'Trần Thị B', trips: 138, onTime: 94, rating: 4.7, violations: 1 },
-    { name: 'Lê Văn C', trips: 152, onTime: 98, rating: 4.9, violations: 0 },
-    { name: 'Phạm Thị D', trips: 141, onTime: 92, rating: 4.6, violations: 2 },
-    { name: 'Hoàng Văn E', trips: 149, onTime: 95, rating: 4.8, violations: 0 }
-  ];
+      setPerformanceData(performance);
+      setRouteAnalysis(routes);
+      setMaintenanceData(maintenance);
+      setDriverPerformance(drivers);
+      setReportStats(stats);
+    } catch (error) {
+      console.error('Error loading report data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const reportTypes = [
     { id: 'performance', label: 'Báo cáo hiệu suất', icon: TrendingUp, color: 'blue' },
@@ -172,7 +190,7 @@ const Reports = () => {
           <ResponsiveContainer width="100%" height={300}>
             <RechartsPieChart>
               <Pie
-                data={maintenanceData}
+                data={maintenanceData as any}
                 cx="50%"
                 cy="50%"
                 outerRadius={100}
@@ -343,7 +361,7 @@ const Reports = () => {
             onClick={handlePrint}
             className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
-            <PrinterIcon className="h-4 w-4" />
+            <Printer className="h-4 w-4" />
             <span>In</span>
           </button>
           <button

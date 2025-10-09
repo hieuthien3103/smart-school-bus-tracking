@@ -58,26 +58,32 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   // Transform data for management components - use global data
   const studentsData = globalStudentsData.map(student => ({
     id: student.id,
-    name: student.name,
-    class: student.grade,    // Transform grade -> class for StudentManagement
-    route: student.bus,      // Transform bus -> route for StudentManagement
-    pickup: student.pickup,
-    dropoff: student.dropoff,
-    parent: student.parent,
-    phone: student.phone,
-    status: student.status
+    name: student.name || 'Chưa có tên',
+    class: student.grade || 'Chưa xác định',    // Transform grade -> class for StudentManagement
+    route: student.bus || 'Chưa phân tuyến',      // Transform bus -> route for StudentManagement
+    pickup: student.pickup || 'Chưa xác định',
+    dropoff: student.dropoff || 'Chưa xác định',
+    parent: student.parent || 'Chưa có thông tin',
+    phone: student.phone || 'Chưa có SĐT',
+    status: student.status || 'Chưa xác định'
   }));
   
   // Transform global drivers data for AdminApp format
   const driversData = globalDriversData.map(driver => ({
     id: driver.id,
-    name: driver.name,
-    phone: driver.phone,
-    license: driver.license,
-    experience: parseInt(driver.experience.replace(' năm', '')) || 0,
-    status: driver.status,
-    currentRoute: driver.bus.replace('BS', 'Tuyến '),
-    currentBus: driver.bus
+    name: driver.name || 'Chưa có tên',
+    phone: driver.phone || 'Chưa có SĐT',
+    license: driver.license || 'Chưa có GPLX',
+    experience: driver.experience ? 
+      (typeof driver.experience === 'string' ? 
+        parseInt(driver.experience.replace(' năm', '')) || 0 : 
+        parseInt(driver.experience) || 0) : 0,
+    status: driver.status || 'Chưa xác định',
+    currentRoute: driver.bus ? 
+      (typeof driver.bus === 'string' ? 
+        driver.bus.replace('BS', 'Tuyến ') : 
+        `Tuyến ${driver.bus}`) : 'Chưa phân tuyến',
+    currentBus: driver.bus || 'Chưa phân xe'
   }));
   
   // Use global buses data directly
@@ -91,14 +97,29 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Sync data with location tracking when bus or schedule data changes
+  // Use ref to track sync state and prevent infinite loops
+  const lastSyncRef = React.useRef({ busCount: 0, scheduleCount: 0 });
+
+  // Sync data with location tracking when data count changes
   React.useEffect(() => {
-    // Update bus locations for tracking
-    updateBusLocations(busesData);
+    const currentBusCount = busesData.length;
+    const currentScheduleCount = scheduleData.length;
     
-    // Sync schedule data with bus tracking
-    syncBusLocationFromSchedule(scheduleData);
-  }, [busesData, driversData, scheduleData, updateBusLocations, syncBusLocationFromSchedule]);
+    // Only sync if the data counts have actually changed
+    if (currentBusCount !== lastSyncRef.current.busCount) {
+      if (currentBusCount > 0) {
+        updateBusLocations(busesData);
+      }
+      lastSyncRef.current.busCount = currentBusCount;
+    }
+    
+    if (currentScheduleCount !== lastSyncRef.current.scheduleCount) {
+      if (currentScheduleCount > 0) {
+        syncBusLocationFromSchedule(scheduleData);
+      }
+      lastSyncRef.current.scheduleCount = currentScheduleCount;
+    }
+  }, [busesData, scheduleData, updateBusLocations, syncBusLocationFromSchedule]);
 
   // CRUD operations
   const handleAdd = (type: 'schedule' | 'student' | 'driver' | 'bus') => {
