@@ -60,6 +60,7 @@ app.use('/api/schedules', require('./routes/schedules'));
 app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
