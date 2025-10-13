@@ -69,7 +69,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   }));
   
   // Transform global drivers data for AdminApp format
-  const driversData = globalDriversData.map(driver => ({
+  const driversData = useMemo(() => globalDriversData.map(driver => ({
     id: driver.id,
     name: driver.name || 'Chưa có tên',
     phone: driver.phone || 'Chưa có SĐT',
@@ -84,7 +84,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         driver.bus.replace('BS', 'Tuyến ') : 
         `Tuyến ${driver.bus}`) : 'Chưa phân tuyến',
     currentBus: driver.bus || 'Chưa phân xe'
-  }));
+  })), [globalDriversData]);
   
   // Use global buses data directly
   const busesData = globalBusesData;

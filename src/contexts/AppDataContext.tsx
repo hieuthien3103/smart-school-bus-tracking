@@ -197,11 +197,18 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
           index === self.findIndex(l => l.id === location.id)
         );
         
-        console.log('Setting bus locations:', uniqueLocations.length, 'unique buses');
+        console.log('✅ API Data loaded successfully:', {
+          buses: busesWithDrivers.length,
+          drivers: driversArray.length,
+          students: studentsArray.length,
+          schedules: schedulesArray.length,
+          busLocations: uniqueLocations.length
+        });
         setBusLocations(uniqueLocations);
 
       } catch (err) {
-        console.error('Error loading initial data:', err);
+        console.error('❌ Error loading initial data:', err);
+        console.warn('⚠️ Fallback to mock data activated');
         setError('Không thể tải dữ liệu. Sử dụng dữ liệu mặc định.');
         
         // Fallback to mock data on error

@@ -443,7 +443,49 @@ const Reports = () => {
 
       {/* Report Content */}
       <div ref={printRef}>
-        {renderCurrentReport()}
+        {isLoading ? (
+          <div className="bg-white rounded-xl shadow-sm border p-12">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <RefreshCw className="h-8 w-8 text-blue-500 animate-spin" />
+              <p className="text-gray-600">Đang tải dữ liệu báo cáo...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Stats Summary */}
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Tổng quan hệ thống</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{reportStats.totalTrips.toLocaleString()}</div>
+                  <div className="text-sm text-gray-600">Tổng chuyến</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{reportStats.activeStudents.toLocaleString()}</div>
+                  <div className="text-sm text-gray-600">Học sinh</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{(reportStats.totalRevenue / 1000000).toFixed(1)}M</div>
+                  <div className="text-sm text-gray-600">Doanh thu (đ)</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600">{reportStats.onTimePercentage}%</div>
+                  <div className="text-sm text-gray-600">Đúng giờ</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">{reportStats.totalBuses}</div>
+                  <div className="text-sm text-gray-600">Xe buýt</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-indigo-600">{reportStats.activeDrivers}</div>
+                  <div className="text-sm text-gray-600">Tài xế</div>
+                </div>
+              </div>
+            </div>
+            
+            {renderCurrentReport()}
+          </div>
+        )}
       </div>
     </div>
   );
