@@ -1,5 +1,5 @@
 {
-  "name": "smart-school-bus-backend",
+  "name": "@smart-school-bus/backend",
   "version": "1.0.0",
   "description": "Backend API for Smart School Bus tracking system",
   "main": "server.js",

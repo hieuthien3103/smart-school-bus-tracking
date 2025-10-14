@@ -1,5 +1,5 @@
 ﻿import apiClient from './client';
-import type { Schedule } from '../../types';
+import type { Schedule } from '@smart-school-bus/shared';
 
 // Interface for creating schedule
 export interface ScheduleCreateData {
