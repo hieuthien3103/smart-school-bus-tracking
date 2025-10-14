@@ -24,6 +24,48 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
 
   const totalStudents = scheduleData.reduce((sum, s) => sum + s.students, 0);
 
+  // Show empty state when no data
+  if (scheduleData.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Quản lý Lịch trình</h1>
+            <p className="text-gray-600 mt-1">Quản lý lịch trình xe buýt trường học</p>
+          </div>
+          <button 
+            onClick={onAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Thêm lịch trình
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">📅</span>
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có lịch trình nào</h3>
+            <p className="text-gray-500 mb-6">
+              Hiện tại chưa có dữ liệu lịch trình từ server. Vui lòng kiểm tra kết nối backend API hoặc thêm lịch trình mới.
+            </p>
+            <button 
+              onClick={onAdd}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              Thêm lịch trình đầu tiên
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

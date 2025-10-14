@@ -81,17 +81,36 @@ const ParentDashboard = () => {
     }
   }, [currentBus]);
 
-  // Early return if no student data
-  if (!studentInfo) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
-          <h1 className="text-2xl font-bold mb-2">Chào mừng, Phụ huynh! 👋</h1>
-          <p className="text-blue-100">Không tìm thấy thông tin học sinh</p>
-        </div>
-      </div>
-    );
-  }
+  // Create empty placeholder data when no student info
+  const placeholderStudentInfo: StudentInfo = {
+    id: 0,
+    name: "Chưa có thông tin",
+    grade: "---",
+    busNumber: "---",
+    driverName: "---",
+    driverPhone: "---",
+    pickupStop: "---",
+    dropoffStop: "---", 
+    pickupTime: "--:--",
+    dropoffTime: "--:--",
+    currentStatus: 'at_home'
+  };
+
+  // Create placeholder bus location data
+  const placeholderBusLocation: BusLocationInfo = {
+    busNumber: "---",
+    currentLocation: "Chưa có thông tin vị trí",
+    distanceToPickup: 0,
+    distanceToDropoff: 0,
+    estimatedPickupTime: "--:--",
+    estimatedDropoffTime: "--:--",
+    isOnRoute: false,
+    lastUpdated: "Chưa cập nhật"
+  };
+
+  // Use actual data if available, otherwise use placeholder
+  const displayStudentInfo = studentInfo || placeholderStudentInfo;
+  const displayBusLocation = busLocation || placeholderBusLocation;
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -134,10 +153,10 @@ const ParentDashboard = () => {
     }
   };
 
-  const statusInfo = getStatusInfo(studentInfo.currentStatus);
+  const statusInfo = getStatusInfo(displayStudentInfo.currentStatus);
 
-  const shouldShowPickupAlert = busLocation.distanceToPickup <= 1 && busLocation.distanceToPickup > 0;
-  const shouldShowDropoffAlert = busLocation.distanceToDropoff <= 1 && busLocation.distanceToDropoff > 0;
+  const shouldShowPickupAlert = displayBusLocation.distanceToPickup <= 1 && displayBusLocation.distanceToPickup > 0;
+  const shouldShowDropoffAlert = displayBusLocation.distanceToDropoff <= 1 && displayBusLocation.distanceToDropoff > 0;
 
   return (
     <div className="space-y-6">
@@ -155,8 +174,8 @@ const ParentDashboard = () => {
             <div>
               <h3 className="text-yellow-800 font-medium">🚌 Xe buýt sắp đến điểm đón!</h3>
               <p className="text-yellow-700 text-sm mt-1">
-                Xe {busLocation.busNumber} cách điểm đón {busLocation.distanceToPickup.toFixed(1)}km, 
-                dự kiến đến lúc {busLocation.estimatedPickupTime}
+                Xe {displayBusLocation.busNumber} cách điểm đón {displayBusLocation.distanceToPickup.toFixed(1)}km, 
+                dự kiến đến lúc {displayBusLocation.estimatedPickupTime}
               </p>
             </div>
           </div>
@@ -170,8 +189,8 @@ const ParentDashboard = () => {
             <div>
               <h3 className="text-green-800 font-medium">🏫 Xe buýt sắp đến trường!</h3>
               <p className="text-green-700 text-sm mt-1">
-                Xe {busLocation.busNumber} cách trường {busLocation.distanceToDropoff.toFixed(1)}km, 
-                dự kiến đến lúc {busLocation.estimatedDropoffTime}
+                Xe {displayBusLocation.busNumber} cách trường {displayBusLocation.distanceToDropoff.toFixed(1)}km, 
+                dự kiến đến lúc {displayBusLocation.estimatedDropoffTime}
               </p>
             </div>
           </div>
@@ -187,8 +206,8 @@ const ParentDashboard = () => {
                 <User className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{studentInfo.name}</h2>
-                <p className="text-gray-600">{studentInfo.grade}</p>
+                <h2 className="text-xl font-bold text-gray-900">{displayStudentInfo.name}</h2>
+                <p className="text-gray-600">{displayStudentInfo.grade}</p>
               </div>
             </div>
             
@@ -210,22 +229,22 @@ const ParentDashboard = () => {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Số xe:</span>
-                <span className="font-medium text-gray-900">{studentInfo.busNumber}</span>
+                <span className="font-medium text-gray-900">{displayStudentInfo.busNumber}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Tài xế:</span>
-                <span className="font-medium text-gray-900">{studentInfo.driverName}</span>
+                <span className="font-medium text-gray-900">{displayStudentInfo.driverName}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Điện thoại:</span>
                 <a 
-                  href={`tel:${studentInfo.driverPhone}`}
+                  href={`tel:${displayStudentInfo.driverPhone}`}
                   className="font-medium text-blue-600 hover:text-blue-800 flex items-center"
                 >
                   <Phone className="h-4 w-4 mr-1" />
-                  {studentInfo.driverPhone}
+                  {displayStudentInfo.driverPhone}
                 </a>
               </div>
             </div>
@@ -242,17 +261,17 @@ const ParentDashboard = () => {
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-gray-600">Điểm đón:</span>
-                  <span className="text-xs text-gray-500">{studentInfo.pickupTime}</span>
+                  <span className="text-xs text-gray-500">{displayStudentInfo.pickupTime}</span>
                 </div>
-                <p className="font-medium text-gray-900">{studentInfo.pickupStop}</p>
+                <p className="font-medium text-gray-900">{displayStudentInfo.pickupStop}</p>
               </div>
               
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-gray-600">Điểm trả:</span>
-                  <span className="text-xs text-gray-500">{studentInfo.dropoffTime}</span>
+                  <span className="text-xs text-gray-500">{displayStudentInfo.dropoffTime}</span>
                 </div>
-                <p className="font-medium text-gray-900">{studentInfo.dropoffStop}</p>
+                <p className="font-medium text-gray-900">{displayStudentInfo.dropoffStop}</p>
               </div>
             </div>
           </div>
@@ -269,7 +288,7 @@ const ParentDashboard = () => {
             </h3>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-600">{busLocation.lastUpdated}</span>
+              <span className="text-sm text-gray-600">{displayBusLocation.lastUpdated}</span>
             </div>
           </div>
         </div>
@@ -278,7 +297,7 @@ const ParentDashboard = () => {
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-600">Vị trí hiện tại:</span>
-              <span className="font-medium text-gray-900">{busLocation.currentLocation}</span>
+              <span className="font-medium text-gray-900">{displayBusLocation.currentLocation}</span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -286,32 +305,32 @@ const ParentDashboard = () => {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-600">Cách điểm đón:</span>
                   <span className="text-sm font-semibold text-blue-600">
-                    {busLocation.distanceToPickup.toFixed(1)} km
+                    {displayBusLocation.distanceToPickup.toFixed(1)} km
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.max(10, 100 - (busLocation.distanceToPickup * 20))}%` }}
+                    style={{ width: `${Math.max(10, 100 - (displayBusLocation.distanceToPickup * 20))}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Dự kiến: {busLocation.estimatedPickupTime}</p>
+                <p className="text-xs text-gray-500 mt-1">Dự kiến: {displayBusLocation.estimatedPickupTime}</p>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-600">Cách điểm trả:</span>
                   <span className="text-sm font-semibold text-green-600">
-                    {busLocation.distanceToDropoff.toFixed(1)} km
+                    {displayBusLocation.distanceToDropoff.toFixed(1)} km
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.max(10, 100 - (busLocation.distanceToDropoff * 10))}%` }}
+                    style={{ width: `${Math.max(10, 100 - (displayBusLocation.distanceToDropoff * 10))}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Dự kiến: {busLocation.estimatedDropoffTime}</p>
+                <p className="text-xs text-gray-500 mt-1">Dự kiến: {displayBusLocation.estimatedDropoffTime}</p>
               </div>
             </div>
           </div>

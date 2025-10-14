@@ -2,11 +2,11 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { BusLocation, Schedule, Driver, Student } from '../types';
-import { mockBusLocations, mockScheduleData, mockDriversData, mockStudentsData, mockBusesData } from '../services/mockData';
+// Mock data imports removed - using API data only
 import { busService } from '../services/api/busService';
 import { driverService } from '../services/api/driverService';
 import { studentService } from '../services/api/studentService';
-import { scheduleService } from '../services/api/scheduleService';
+import scheduleService from '../services/api/scheduleService';
 
 // AdminApp bus format
 interface AdminBusData {
@@ -35,6 +35,9 @@ interface AppDataContextType {
   // Schedule data
   scheduleData: Schedule[];
   setScheduleData: React.Dispatch<React.SetStateAction<Schedule[]>>;
+  addSchedule: (schedule: Omit<Schedule, 'id'>) => void;
+  updateSchedule: (scheduleId: number, schedule: Partial<Schedule>) => void;
+  deleteSchedule: (scheduleId: number) => void;
   
   // Driver data  
   driversData: Driver[];
@@ -121,9 +124,22 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         })) || [];
         setDriversData(driversArray);
         
-        // Set students data
+        // Transform students data to match Student interface
         const studentsArray = Array.isArray(students) ? students as any[] : (students as any)?.data || [];
-        setStudentsData(studentsArray);
+        const transformedStudents = studentsArray.map((student: any) => ({
+          id: student.id,
+          name: student.name,
+          grade: student.grade || `Lớp ${student.class}` || 'Không rõ',
+          bus: student.route_name || 'Chưa phân tuyến', // Use route_name as bus
+          pickup: student.pickup_address || student.address || 'Chưa xác định',
+          dropoff: student.dropoff_address || student.school_name || 'Trường',
+          pickupTime: '07:00', // TODO: Get from schedule
+          dropoffTime: '11:30', // TODO: Get from schedule
+          parent: 'Phụ huynh', // TODO: Get parent info from API
+          phone: '0123456789', // TODO: Get parent phone from API
+          status: student.status === 'active' ? 'Hoạt động' : 'Nghỉ học'
+        }));
+        setStudentsData(transformedStudents);
         
         // Transform schedules to match the expected format
         const schedulesArray = Array.isArray(schedules) ? (schedules as any[]).map((schedule: any) => ({
@@ -208,30 +224,14 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
 
       } catch (err) {
         console.error('❌ Error loading initial data:', err);
-        console.warn('⚠️ Fallback to mock data activated');
-        setError('Không thể tải dữ liệu. Sử dụng dữ liệu mặc định.');
+        setError('❌ Không thể kết nối với server. Vui lòng kiểm tra kết nối backend API.');
         
-        // Fallback to mock data on error
-        setBusLocations(mockBusLocations);
-        setScheduleData(mockScheduleData);
-        setDriversData(mockDriversData);
-        setStudentsData(mockStudentsData);
-        setBusesData(mockBusesData.map(bus => ({
-          id: bus.id,
-          busNumber: bus.number,
-          model: 'Standard Bus',
-          capacity: bus.capacity,
-          year: 2020,
-          plateNumber: `${bus.number}-SCHOOL`,
-          status: bus.status,
-          currentDriver: bus.driver,
-          currentRoute: bus.route,
-          mileage: Math.floor(Math.random() * 100000),
-          fuelLevel: Math.floor(Math.random() * 100),
-          lastMaintenance: bus.lastMaintenance,
-          nextMaintenance: bus.nextMaintenance,
-          condition: 'Tốt'
-        })));
+        // ✅ NO FALLBACK TO MOCK DATA - Keep data empty until API works
+        setBusLocations([]);
+        setScheduleData([]);
+        setDriversData([]);
+        setStudentsData([]);
+        setBusesData([]);
       } finally {
         setIsLoading(false);
       }
@@ -409,70 +409,406 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     return studentsData.filter(student => student.bus === driverBus.busNumber);
   }, [busLocations, studentsData]);
 
-  // Student CRUD operations
-  const addStudent = useCallback((student: Omit<Student, 'id'>) => {
-    setStudentsData(prev => {
-      const newId = Math.max(...prev.map(s => s.id), 0) + 1;
-      return [...prev, { ...student, id: newId }];
-    });
+  // Student CRUD operations with API integration
+  const addStudent = useCallback(async (student: Omit<Student, 'id'>) => {
+    try {
+      // Map frontend format to backend format
+      const studentData: any = {
+        name: student.name,
+        student_code: (student as any).student_code,      // ✅ NEW: Required field
+        date_of_birth: (student as any).date_of_birth,    // ✅ NEW: Required field
+        gender: (student as any).gender,                  // ✅ NEW: Required field
+        grade: student.grade,
+        parent_name: student.parent,
+        parent_phone: student.phone,
+        status: student.status?.toLowerCase() || 'active',
+        school_id: 1 // Default school, should get from context
+      };
+
+      // Call API to create student
+      const response: any = await studentService.createStudent(studentData);
+      
+      if (response.data?.success || response.success) {
+        // Update local state with the new student from server
+        const newStudent = response.data?.data || response.data;
+        setStudentsData(prev => [...prev, {
+          id: newStudent.id,
+          name: newStudent.name,
+          grade: newStudent.grade,
+          bus: student.bus || '',
+          pickup: student.pickup || '',
+          dropoff: student.dropoff || '',
+          pickupTime: student.pickupTime || '',
+          dropoffTime: student.dropoffTime || '',
+          parent: newStudent.parent_name || student.parent,
+          phone: newStudent.parent_phone || student.phone,
+          status: newStudent.status || student.status
+        }]);
+        console.log('✅ Student created successfully:', newStudent);
+      }
+    } catch (error) {
+      console.error('❌ Error creating student:', error);
+      // Fallback to local state if API fails
+      setStudentsData(prev => {
+        const newId = Math.max(...prev.map(s => s.id), 0) + 1;
+        return [...prev, { ...student, id: newId }];
+      });
+    }
   }, []);
 
-  const updateStudent = useCallback((studentId: number, student: Partial<Student>) => {
-    setStudentsData(prev => 
-      prev.map(s => 
-        s.id === studentId 
-          ? { ...s, ...student }
-          : s
-      )
-    );
+  const updateStudent = useCallback(async (studentId: number, student: Partial<Student>) => {
+    try {
+      // Map frontend format to backend format
+      const studentData: any = {};
+      if (student.name) studentData.name = student.name;
+      if (student.grade) studentData.grade = student.grade;
+      if (student.parent) studentData.parent_name = student.parent;
+      if (student.phone) studentData.parent_phone = student.phone;
+      if (student.status) studentData.status = student.status.toLowerCase();
+
+      // Call API to update student
+      const response: any = await studentService.updateStudent(studentId, studentData);
+      
+      if (response.data?.success || response.success) {
+        // Update local state
+        setStudentsData(prev => 
+          prev.map(s => 
+            s.id === studentId 
+              ? { ...s, ...student }
+              : s
+          )
+        );
+        console.log('✅ Student updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error updating student:', error);
+      // Fallback to local state if API fails
+      setStudentsData(prev => 
+        prev.map(s => 
+          s.id === studentId 
+            ? { ...s, ...student }
+            : s
+        )
+      );
+    }
   }, []);
 
-  const deleteStudent = useCallback((studentId: number) => {
-    setStudentsData(prev => prev.filter(s => s.id !== studentId));
+  const deleteStudent = useCallback(async (studentId: number) => {
+    try {
+      // Call API to delete student
+      const response: any = await studentService.deleteStudent(studentId);
+      
+      if (response.data?.success || response.success) {
+        // Update local state
+        setStudentsData(prev => prev.filter(s => s.id !== studentId));
+        console.log('✅ Student deleted successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting student:', error);
+      // Fallback to local state if API fails
+      setStudentsData(prev => prev.filter(s => s.id !== studentId));
+    }
   }, []);
 
-  // Driver CRUD operations
-  const addDriver = useCallback((driver: Omit<Driver, 'id'>) => {
-    setDriversData(prev => {
-      const newId = Math.max(...prev.map(d => d.id), 0) + 1;
-      return [...prev, { ...driver, id: newId }];
-    });
+  // Driver CRUD operations with API integration
+  const addDriver = useCallback(async (driver: Omit<Driver, 'id'>) => {
+    try {
+      // Map frontend format to backend format
+      const driverData: any = {
+        name: driver.name,
+        user_id: (driver as any).user_id || 1,              // ✅ NEW: Required field
+        employee_id: (driver as any).employee_id,           // ✅ NEW: Required field
+        license_number: driver.license,
+        license_type: (driver as any).license_type,         // ✅ NEW: Required field
+        license_expiry: (driver as any).license_expiry,     // ✅ NEW: Required field
+        phone: driver.phone,
+        status: driver.status?.toLowerCase() || 'active',
+        email: `${driver.name.toLowerCase().replace(/\s+/g, '.')}@schoolbus.com` // Generate email
+      };
+
+      // Call API to create driver
+      const response: any = await driverService.createDriver(driverData);
+      
+      if (response.data?.success || response.success) {
+        // Update local state with the new driver from server
+        const newDriver = response.data?.data || response.data;
+        setDriversData(prev => [...prev, {
+          id: newDriver.id,
+          name: newDriver.name,
+          license: newDriver.license_number || driver.license,
+          phone: newDriver.phone,
+          bus: driver.bus || '',
+          experience: driver.experience || '',
+          rating: driver.rating || 5.0,
+          status: newDriver.status || driver.status
+        }]);
+        console.log('✅ Driver created successfully:', newDriver);
+      }
+    } catch (error) {
+      console.error('❌ Error creating driver:', error);
+      // Fallback to local state if API fails
+      setDriversData(prev => {
+        const newId = Math.max(...prev.map(d => d.id), 0) + 1;
+        return [...prev, { ...driver, id: newId }];
+      });
+    }
   }, []);
 
-  const updateDriver = useCallback((driverId: number, driver: Partial<Driver>) => {
-    setDriversData(prev => 
-      prev.map(d => 
-        d.id === driverId 
-          ? { ...d, ...driver }
-          : d
-      )
-    );
+  const updateDriver = useCallback(async (driverId: number, driver: Partial<Driver>) => {
+    try {
+      // Map frontend format to backend format
+      const driverData: any = {};
+      if (driver.name) driverData.name = driver.name;
+      if (driver.license) driverData.license_number = driver.license;
+      if (driver.phone) driverData.phone = driver.phone;
+      if (driver.status) driverData.status = driver.status.toLowerCase();
+
+      // Call API to update driver
+      const response: any = await driverService.updateDriver(driverId, driverData);
+      
+      if (response.data?.success || response.success) {
+        // Update local state
+        setDriversData(prev => 
+          prev.map(d => 
+            d.id === driverId 
+              ? { ...d, ...driver }
+              : d
+          )
+        );
+        console.log('✅ Driver updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error updating driver:', error);
+      // Fallback to local state if API fails
+      setDriversData(prev => 
+        prev.map(d => 
+          d.id === driverId 
+            ? { ...d, ...driver }
+            : d
+        )
+      );
+    }
   }, []);
 
-  const deleteDriver = useCallback((driverId: number) => {
-    setDriversData(prev => prev.filter(d => d.id !== driverId));
+  const deleteDriver = useCallback(async (driverId: number) => {
+    try {
+      // Call API to delete driver
+      const response: any = await driverService.deleteDriver(driverId);
+      
+      if (response.data?.success || response.success) {
+        // Update local state
+        setDriversData(prev => prev.filter(d => d.id !== driverId));
+        console.log('✅ Driver deleted successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting driver:', error);
+      // Fallback to local state if API fails
+      setDriversData(prev => prev.filter(d => d.id !== driverId));
+    }
   }, []);
 
   // Bus CRUD operations
-  const addBus = useCallback((bus: Omit<AdminBusData, 'id'>) => {
-    setBusesData(prev => {
-      const newId = Math.max(...prev.map(b => b.id), 0) + 1;
-      return [...prev, { ...bus, id: newId }];
-    });
+  const addBus = useCallback(async (bus: Omit<AdminBusData, 'id'>) => {
+    try {
+      // Map status to valid backend values
+      const statusMap: any = {
+        'Hoạt động': 'active',
+        'Bảo trì': 'maintenance', 
+        'Hỏng hóc': 'maintenance',
+        'Không hoạt động': 'inactive'
+      };
+
+      // Map frontend format to backend format
+      const busData: any = {
+        bus_number: bus.busNumber,
+        license_plate: bus.plateNumber,
+        model: bus.model,
+        capacity: bus.capacity,
+        year_manufactured: bus.year,
+        status: statusMap[bus.status] || 'active',
+        last_maintenance_date: bus.lastMaintenance,
+        next_maintenance_date: bus.nextMaintenance,
+        fuel_type: 'diesel'
+      };
+
+      // Call API to create bus
+      const response: any = await busService.createBus(busData);
+      
+      if (response.data?.success) {
+        // Update local state with the new bus from server
+        const newBus = response.data.data;
+        setBusesData(prev => [...prev, {
+          id: newBus.id,
+          busNumber: newBus.bus_number,
+          plateNumber: newBus.license_plate,
+          model: newBus.model || 'Unknown',
+          capacity: newBus.capacity,
+          year: newBus.year_manufactured || 2020,
+          status: bus.status,
+          currentDriver: bus.currentDriver || '',
+          currentRoute: bus.currentRoute || '',
+          mileage: bus.mileage || 0,
+          fuelLevel: bus.fuelLevel || 100,
+          lastMaintenance: newBus.last_maintenance_date || bus.lastMaintenance,
+          nextMaintenance: newBus.next_maintenance_date || bus.nextMaintenance,
+          condition: bus.condition || 'Tốt'
+        }]);
+        console.log('✅ Bus created successfully:', response.data.data);
+      }
+    } catch (error) {
+      console.error('❌ Error creating bus:', error);
+      throw error;
+    }
   }, []);
 
-  const updateBus = useCallback((busId: number, bus: Partial<AdminBusData>) => {
-    setBusesData(prev => 
-      prev.map(b => 
-        b.id === busId 
-          ? { ...b, ...bus }
-          : b
-      )
-    );
+  const updateBus = useCallback(async (busId: number, bus: Partial<AdminBusData>) => {
+    try {
+      // Map status to valid backend values
+      const statusMap: any = {
+        'Hoạt động': 'active',
+        'Bảo trì': 'maintenance',
+        'Hỏng hóc': 'maintenance',
+        'Không hoạt động': 'inactive'
+      };
+
+      // Map frontend format to backend format
+      const busData: any = {};
+      if (bus.busNumber) busData.bus_number = bus.busNumber;
+      if (bus.plateNumber) busData.license_plate = bus.plateNumber;
+      if (bus.model) busData.model = bus.model;
+      if (bus.capacity) busData.capacity = bus.capacity;
+      if (bus.year) busData.year_manufactured = bus.year;
+      if (bus.status) busData.status = statusMap[bus.status] || 'active';
+      if (bus.lastMaintenance) busData.last_maintenance_date = bus.lastMaintenance;
+      if (bus.nextMaintenance) busData.next_maintenance_date = bus.nextMaintenance;
+
+      // Call API to update bus
+      const response: any = await busService.updateBus(busId, busData);
+      
+      if (response.data?.success) {
+        // Update local state
+        setBusesData(prev => 
+          prev.map(b => 
+            b.id === busId 
+              ? { ...b, ...bus }
+              : b
+          )
+        );
+        console.log('✅ Bus updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error updating bus:', error);
+      throw error;
+    }
   }, []);
 
-  const deleteBus = useCallback((busId: number) => {
-    setBusesData(prev => prev.filter(b => b.id !== busId));
+  const deleteBus = useCallback(async (busId: number) => {
+    try {
+      // Call API to delete bus
+      const response: any = await busService.deleteBus(busId);
+      
+      if (response.data?.success) {
+        // Update local state
+        setBusesData(prev => prev.filter(b => b.id !== busId));
+        console.log('✅ Bus deleted successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting bus:', error);
+      throw error;
+    }
+  }, []);
+
+  // Schedule CRUD operations with API integration
+  const addSchedule = useCallback(async (schedule: Omit<Schedule, 'id'>) => {
+    try {
+      // Map frontend format to backend format
+      const scheduleData: any = {
+        route_id: 1, // Default, should get from context
+        bus_id: 1, // Default, should get from context
+        driver_id: 1, // Default, should get from context
+        schedule_date: (schedule as any).schedule_date,   // ✅ NEW: Required field
+        start_time: (schedule as any).start_time,         // ✅ NEW: Required field
+        departure_time: schedule.time,
+        trip_type: 'morning',
+        status: schedule.status?.toLowerCase() || 'scheduled'
+      };
+
+      // Call API to create schedule
+      const response: any = await scheduleService.createSchedule(scheduleData);
+      
+      if (response.data?.success || response.success) {
+        // Update local state with the new schedule from server
+        const newSchedule = response.data?.data || response.data;
+        setScheduleData(prev => [...prev, {
+          id: newSchedule.id,
+          route: schedule.route,
+          time: newSchedule.departure_time || schedule.time,
+          students: schedule.students || 0,
+          driver: schedule.driver,
+          bus: schedule.bus,
+          status: newSchedule.status || schedule.status
+        }]);
+        console.log('✅ Schedule created successfully:', newSchedule);
+      }
+    } catch (error) {
+      console.error('❌ Error creating schedule:', error);
+      // Fallback to local state if API fails
+      setScheduleData(prev => {
+        const newId = Math.max(...prev.map(s => s.id), 0) + 1;
+        return [...prev, { ...schedule, id: newId }];
+      });
+    }
+  }, []);
+
+  const updateSchedule = useCallback(async (scheduleId: number, schedule: Partial<Schedule>) => {
+    try {
+      // Map frontend format to backend format
+      const scheduleData: any = {};
+      if (schedule.time) scheduleData.departure_time = schedule.time;
+      if (schedule.status) scheduleData.status = schedule.status.toLowerCase();
+
+      // Call API to update schedule
+      const response: any = await scheduleService.updateSchedule(scheduleId, scheduleData);
+      
+      if (response.data?.success || response.success) {
+        // Update local state
+        setScheduleData(prev => 
+          prev.map(s => 
+            s.id === scheduleId 
+              ? { ...s, ...schedule }
+              : s
+          )
+        );
+        console.log('✅ Schedule updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error updating schedule:', error);
+      // Fallback to local state if API fails
+      setScheduleData(prev => 
+        prev.map(s => 
+          s.id === scheduleId 
+            ? { ...s, ...schedule }
+            : s
+        )
+      );
+    }
+  }, []);
+
+  const deleteSchedule = useCallback(async (scheduleId: number) => {
+    try {
+      // Call API to delete schedule
+      const response: any = await scheduleService.deleteSchedule(scheduleId);
+      
+      if (response.data?.success || response.success) {
+        // Update local state
+        setScheduleData(prev => prev.filter(s => s.id !== scheduleId));
+        console.log('✅ Schedule deleted successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting schedule:', error);
+      // Fallback to local state if API fails
+      setScheduleData(prev => prev.filter(s => s.id !== scheduleId));
+    }
   }, []);
 
   const contextValue: AppDataContextType = {
@@ -481,6 +817,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     updateBusLocations,
     scheduleData,
     setScheduleData,
+    addSchedule,
+    updateSchedule,
+    deleteSchedule,
     driversData,
     setDriversData,
     addDriver,

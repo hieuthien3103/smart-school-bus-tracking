@@ -1,6 +1,6 @@
 interface FormField {
   name: string;
-  type: 'text' | 'time' | 'number' | 'select';
+  type: 'text' | 'time' | 'number' | 'select' | 'date';
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;

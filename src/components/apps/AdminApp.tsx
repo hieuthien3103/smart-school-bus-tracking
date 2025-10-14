@@ -202,6 +202,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             const newSchedule = {
               id: newId,
               route: formData.route,
+              schedule_date: formData.schedule_date,  // ✅ NEW: Required field for API
+              start_time: formData.start_time,        // ✅ NEW: Required field for API
               time: formData.time,
               students: parseInt(formData.students) || 0,
               driver: formData.driver,
@@ -236,6 +238,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             // Convert AdminApp format to context format
             const newStudentData = {
               name: formData.name,
+              student_code: formData.student_code,    // ✅ NEW: Required field for API
+              date_of_birth: formData.date_of_birth,  // ✅ NEW: Required field for API
+              gender: formData.gender,                // ✅ NEW: Required field for API
               grade: formData.grade || 'Lớp 6A',      // Use grade from form
               bus: selectedBus,                       // Use bus from form
               pickup: formData.pickup || 'Chưa cập nhật địa chỉ đón',
@@ -254,8 +259,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             // Convert to Driver format for global context
             const newDriver = {
               name: formData.name,
+              user_id: parseInt(formData.user_id) || 1,       // ✅ NEW: Required field for API
+              employee_id: formData.employee_id,              // ✅ NEW: Required field for API
               phone: formData.phone,
               license: formData.license,
+              license_type: formData.license_type,            // ✅ NEW: Required field for API
+              license_expiry: formData.license_expiry,        // ✅ NEW: Required field for API
               experience: `${parseInt(formData.experience) || 0} năm`,
               status: 'Đang hoạt động',
               bus: formData.bus || 'BS001',
@@ -435,6 +444,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             placeholder: 'Chọn tuyến đường cho lịch trình',
             options: generateRouteOptions()
           },
+          { name: 'schedule_date', label: 'Ngày lịch trình', type: 'date', required: true, placeholder: 'Chọn ngày thực hiện lịch trình' },
+          { name: 'start_time', label: 'Giờ bắt đầu', type: 'time', required: true, placeholder: 'VD: 07:30 (giờ bắt đầu chuyến)' },
           { name: 'time', label: 'Thời gian khởi hành', type: 'time', required: true, placeholder: 'VD: 07:30 (giờ bắt đầu chuyến)' },
           { name: 'students', label: 'Số học sinh dự kiến', type: 'number', required: true, placeholder: 'VD: 25 (số học sinh trên chuyến)' },
           { 
@@ -469,6 +480,20 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
       case 'student':
         return [
           { name: 'name', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Nguyễn Văn An' },
+          { name: 'student_code', label: 'Mã học sinh', type: 'text', required: true, placeholder: 'VD: HS001, HS002' },
+          { name: 'date_of_birth', label: 'Ngày sinh', type: 'date', required: true, placeholder: 'Chọn ngày sinh' },
+          { 
+            name: 'gender', 
+            label: 'Giới tính', 
+            type: 'select', 
+            required: true,
+            placeholder: 'Chọn giới tính',
+            options: [
+              { value: 'male', label: '👦 Nam' },
+              { value: 'female', label: '👧 Nữ' },
+              { value: 'other', label: '🧑 Khác' }
+            ]
+          },
           { name: 'grade', label: 'Lớp', type: 'text', required: true, placeholder: 'VD: Lớp 6A, Lớp 7B' },
           { 
             name: 'bus', 
@@ -486,7 +511,25 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
       case 'driver':
         return [
           { name: 'name', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Trần Văn Tài Xế' },
-          { name: 'license', label: 'Bằng lái', type: 'text', required: true, placeholder: 'VD: D123456789 (Bằng lái hạng D)' },
+          { name: 'user_id', label: 'ID Người dùng', type: 'number', required: true, placeholder: 'VD: 1, 2, 3 (ID tài khoản)' },
+          { name: 'employee_id', label: 'Mã nhân viên', type: 'text', required: true, placeholder: 'VD: EMP001, NV001' },
+          { name: 'license', label: 'Số bằng lái', type: 'text', required: true, placeholder: 'VD: D123456789' },
+          { 
+            name: 'license_type', 
+            label: 'Loại bằng lái', 
+            type: 'select', 
+            required: true,
+            placeholder: 'Chọn loại bằng lái',
+            options: [
+              { value: 'B1', label: 'B1 - Xe ô tô không kinh doanh vận tải' },
+              { value: 'B2', label: 'B2 - Xe ô tô không kinh doanh vận tải (số sàn)' },
+              { value: 'C', label: 'C - Xe ô tô tải và xe ô tô chở người' },
+              { value: 'D', label: 'D - Xe ô tô chở người từ 9 chỗ ngồi trở lên' },
+              { value: 'E', label: 'E - Xe ô tô kéo rơ moóc' },
+              { value: 'FC', label: 'FC - Xe ô tô chở người 9 chỗ + C' }
+            ]
+          },
+          { name: 'license_expiry', label: 'Ngày hết hạn GPLX', type: 'date', required: true, placeholder: 'Chọn ngày hết hạn bằng lái' },
           { name: 'phone', label: 'Điện thoại', type: 'text', required: true, placeholder: 'VD: 0987654321' },
           { 
             name: 'bus', 

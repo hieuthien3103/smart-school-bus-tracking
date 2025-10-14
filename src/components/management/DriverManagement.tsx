@@ -34,6 +34,48 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
     }
   };
 
+  // Show empty state when no data
+  if (driversData.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Quản lý Tài xế</h1>
+            <p className="text-gray-600">Quản lý thông tin tài xế xe bus</p>
+          </div>
+          <button
+            onClick={onAdd}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Thêm Tài xế
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🚗</span>
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có tài xế nào</h3>
+            <p className="text-gray-500 mb-6">
+              Hiện tại chưa có dữ liệu tài xế từ server. Vui lòng kiểm tra kết nối backend API hoặc thêm tài xế mới.
+            </p>
+            <button 
+              onClick={onAdd}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              Thêm tài xế đầu tiên
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

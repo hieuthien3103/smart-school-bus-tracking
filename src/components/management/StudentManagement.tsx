@@ -16,6 +16,45 @@ interface StudentManagementProps {
 }
 
 const StudentManagement = ({ studentsData, onAdd, onEdit, onDelete }: StudentManagementProps) => {
+  // Show empty state when no data
+  if (studentsData.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý Học sinh</h1>
+          <button 
+            onClick={onAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Thêm học sinh
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">👨‍🎓</span>
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có học sinh nào</h3>
+            <p className="text-gray-500 mb-6">
+              Hiện tại chưa có dữ liệu học sinh từ server. Vui lòng kiểm tra kết nối backend API hoặc thêm học sinh mới.
+            </p>
+            <button 
+              onClick={onAdd}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              Thêm học sinh đầu tiên
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

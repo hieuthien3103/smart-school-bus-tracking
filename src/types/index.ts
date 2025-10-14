@@ -89,7 +89,7 @@ export interface Notification {
 
 export interface FormField {
   name: string;
-  type: 'text' | 'time' | 'number' | 'select';
+  type: 'text' | 'time' | 'number' | 'select' | 'date';
   label?: string;
   placeholder?: string;
   options?: { value: string; label: string }[];
