@@ -32,37 +32,58 @@ export interface BusLocation {
 
 export interface Schedule {
   id: number;
-  route: string;
-  time: string;
-  students: number;
-  driver: string;
-  bus: string;
-  status: string;
+  route_id: number;
+  driver_id: number;
+  bus_id: number;
+  schedule_date: string;
+  schedule_type: 'morning' | 'afternoon';
+  start_time: string;
+  end_time: string;
+  total_students: number;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Student {
   id: number;
+  student_code: string;
   name: string;
   grade: string;
-  bus: string;
-  pickup: string;
-  dropoff: string;
-  pickupTime: string;
-  dropoffTime: string;
-  parent: string;
-  phone: string;
-  status: string;
+  class: string;
+  date_of_birth: string;
+  gender: 'male' | 'female';
+  address: string;
+  pickup_address: string;
+  dropoff_address: string;
+  school_id: number;
+  route_id?: number;
+  stop_id?: number;
+  status: 'active' | 'inactive' | 'transferred' | 'graduated';
+  medical_notes?: string;
+  allergies?: string;
+  emergency_instructions?: string;
+  photo?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Driver {
   id: number;
   name: string;
-  license: string;
   phone: string;
-  bus: string;
-  experience: string;
-  rating: number;
-  status: string;
+  license_number: string;
+  experience: number;
+  hire_date: string;
+  current_bus_id?: number;
+  status: 'active' | 'inactive' | 'on_leave';
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  address?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Bus {
@@ -89,7 +110,7 @@ export interface Notification {
 
 export interface FormField {
   name: string;
-  type: 'text' | 'time' | 'number' | 'select' | 'date';
+  type: 'text' | 'time' | 'number' | 'select' | 'date' | 'textarea';
   label?: string;
   placeholder?: string;
   options?: { value: string; label: string }[];

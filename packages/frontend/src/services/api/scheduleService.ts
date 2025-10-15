@@ -7,10 +7,26 @@ export interface ScheduleCreateData {
   bus_id: number;
   driver_id: number;
   schedule_date: string;
+  schedule_type: 'morning' | 'afternoon';
   start_time: string;
-  departure_time: string;
-  trip_type: 'morning' | 'afternoon' | 'evening';
-  status: string;
+  end_time: string;
+  total_students: number;
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string;
+}
+
+// Interface for updating schedule
+export interface ScheduleUpdateData {
+  route_id?: number;
+  bus_id?: number;
+  driver_id?: number;
+  schedule_date?: string;
+  schedule_type?: 'morning' | 'afternoon';
+  start_time?: string;
+  end_time?: string;
+  total_students?: number;
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string;
 }
 
 class ScheduleService {

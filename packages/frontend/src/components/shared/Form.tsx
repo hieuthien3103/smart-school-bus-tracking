@@ -1,6 +1,6 @@
 interface FormField {
   name: string;
-  type: 'text' | 'time' | 'number' | 'select' | 'date';
+  type: 'text' | 'time' | 'number' | 'select' | 'date' | 'textarea';
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
@@ -57,6 +57,15 @@ const Form = ({
                     </option>
                   ))}
                 </select>
+              ) : field.type === 'textarea' ? (
+                <textarea
+                  name={field.name}
+                  placeholder={field.placeholder || `Nhập ${field.name.toLowerCase()}...`}
+                  defaultValue={field.defaultValue as string}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-y min-h-[100px]"
+                  required={field.required}
+                  rows={3}
+                />
               ) : (
                 <input
                   name={field.name}

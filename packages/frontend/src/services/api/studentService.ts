@@ -4,33 +4,43 @@ import { ENDPOINTS } from './config';
 
 // Student DTOs
 export interface CreateStudentDto {
+  student_code: string;
   name: string;
   grade: string;
+  class: string;
+  date_of_birth: string;
+  gender: 'male' | 'female';
+  address: string;
+  pickup_address: string;
+  dropoff_address: string;
   school_id: number;
   route_id?: number;
-  pickup_stop_id?: number;
-  dropoff_stop_id?: number;
-  parent_name: string;
-  parent_phone: string;
-  parent_email?: string;
-  emergency_contact?: string;
+  stop_id?: number;
+  status?: 'active' | 'inactive' | 'transferred' | 'graduated';
   medical_notes?: string;
-  status?: 'active' | 'inactive' | 'transferred';
+  allergies?: string;
+  emergency_instructions?: string;
+  photo?: string;
 }
 
 export interface UpdateStudentDto {
+  student_code?: string;
   name?: string;
   grade?: string;
+  class?: string;
+  date_of_birth?: string;
+  gender?: 'male' | 'female';
+  address?: string;
+  pickup_address?: string;
+  dropoff_address?: string;
   school_id?: number;
   route_id?: number;
-  pickup_stop_id?: number;
-  dropoff_stop_id?: number;
-  parent_name?: string;
-  parent_phone?: string;
-  parent_email?: string;
-  emergency_contact?: string;
+  stop_id?: number;
+  status?: 'active' | 'inactive' | 'transferred' | 'graduated';
   medical_notes?: string;
-  status?: 'active' | 'inactive' | 'transferred';
+  allergies?: string;
+  emergency_instructions?: string;
+  photo?: string;
 }
 
 export interface StudentFilters {

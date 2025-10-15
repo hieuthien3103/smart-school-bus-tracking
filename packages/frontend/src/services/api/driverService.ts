@@ -4,13 +4,46 @@ import { apiClient } from './client';
 export interface Driver {
   id: number;
   name: string;
-  email: string;
   phone: string;
   license_number: string;
-  status: 'active' | 'inactive';
-  bus_id?: number;
-  created_at: string;
-  updated_at: string;
+  experience: number;
+  hire_date: string;
+  current_bus_id?: number;
+  status: 'active' | 'inactive' | 'on_leave';
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  address?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateDriverDto {
+  name: string;
+  phone: string;
+  license_number: string;
+  experience: number;
+  hire_date: string;
+  current_bus_id?: number;
+  status?: 'active' | 'inactive' | 'on_leave';
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  address?: string;
+  notes?: string;
+}
+
+export interface UpdateDriverDto {
+  name?: string;
+  phone?: string;
+  license_number?: string;
+  experience?: number;
+  hire_date?: string;
+  current_bus_id?: number;
+  status?: 'active' | 'inactive' | 'on_leave';
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  address?: string;
+  notes?: string;
 }
 
 // Driver Service
@@ -30,12 +63,12 @@ export const driverService = {
   },
 
   // Create new driver
-  async createDriver(data: Omit<Driver, 'id' | 'created_at' | 'updated_at'>) {
+  async createDriver(data: CreateDriverDto) {
     return apiClient.post('/drivers', data);
   },
 
   // Update driver
-  async updateDriver(id: number, data: Partial<Driver>) {
+  async updateDriver(id: number, data: UpdateDriverDto) {
     return apiClient.put(`/drivers/${id}`, data);
   },
 
