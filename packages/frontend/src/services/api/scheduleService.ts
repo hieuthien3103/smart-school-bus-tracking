@@ -1,40 +1,46 @@
 ﻿import apiClient from './client';
-import type { Schedule } from '@smart-school-bus/shared';
 
-// Interface for creating schedule
+// Interface for creating schedule (English names for frontend)
 export interface ScheduleCreateData {
-  route_id: number;
-  bus_id: number;
-  driver_id: number;
-  schedule_date: string;
-  schedule_type: 'morning' | 'afternoon';
-  start_time: string;
-  end_time: string;
-  total_students: number;
-  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  notes?: string;
+  route_id: number;      // ma_tuyen
+  bus_id: number;        // ma_xe
+  driver_id: number;     // ma_tai_xe
+  schedule_date: string; // ngay_chay
+  start_time: string;    // gio_bat_dau
+  end_time: string;      // gio_ket_thuc
+  status?: string;       // trang_thai_lich
 }
 
-// Interface for updating schedule
-export interface ScheduleUpdateData {
-  route_id?: number;
-  bus_id?: number;
-  driver_id?: number;
-  schedule_date?: string;
-  schedule_type?: 'morning' | 'afternoon';
-  start_time?: string;
-  end_time?: string;
-  total_students?: number;
-  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  notes?: string;
+// Interface for Vietnamese backend
+interface ScheduleBackendData {
+  ma_tuyen: number;
+  ma_xe: number;
+  ma_tai_xe: number;
+  ngay_chay: string;
+  gio_bat_dau: string;
+  gio_ket_thuc: string;
+  trang_thai_lich?: string;
+}
+
+// Map frontend data to backend format
+function mapToBackend(data: ScheduleCreateData): ScheduleBackendData {
+  return {
+    ma_tuyen: data.route_id,
+    ma_xe: data.bus_id,
+    ma_tai_xe: data.driver_id,
+    ngay_chay: data.schedule_date,
+    gio_bat_dau: data.start_time,
+    gio_ket_thuc: data.end_time,
+    trang_thai_lich: data.status || 'cho_chay'
+  };
 }
 
 class ScheduleService {
   // Get all schedules
-  async getAllSchedules(): Promise<Schedule[]> {
+  async getAllSchedules(): Promise<any[]> {
     try {
-      const response = await apiClient.get<Schedule[]>('/schedules');
-      return response;
+      const response = await apiClient.get<any>('/schedules');
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching schedules:', error);
       throw error;
@@ -42,10 +48,10 @@ class ScheduleService {
   }
 
   // Get schedule by ID
-  async getScheduleById(id: number): Promise<Schedule | null> {
+  async getScheduleById(id: number): Promise<any | null> {
     try {
-      const response = await apiClient.get<Schedule>(`/schedules/${id}`);
-      return response;
+      const response = await apiClient.get<any>(`/schedules/${id}`);
+      return response.data || null;
     } catch (error) {
       console.error('Error fetching schedule:', error);
       throw error;
@@ -53,10 +59,11 @@ class ScheduleService {
   }
 
   // Create new schedule
-  async createSchedule(scheduleData: ScheduleCreateData): Promise<Schedule> {
+  async createSchedule(scheduleData: ScheduleCreateData): Promise<any> {
     try {
-      const response = await apiClient.post<Schedule>('/schedules', scheduleData);
-      return response;
+      const backendData = mapToBackend(scheduleData);
+      const response = await apiClient.post<any>('/schedules', backendData);
+      return response.data;
     } catch (error) {
       console.error('Error creating schedule:', error);
       throw error;
@@ -64,10 +71,11 @@ class ScheduleService {
   }
 
   // Update schedule
-  async updateSchedule(id: number, scheduleData: Partial<ScheduleCreateData>): Promise<Schedule> {
+  async updateSchedule(id: number, scheduleData: Partial<ScheduleCreateData>): Promise<any> {
     try {
-      const response = await apiClient.put<Schedule>(`/schedules/${id}`, scheduleData);
-      return response;
+      const backendData = mapToBackend(scheduleData as ScheduleCreateData);
+      const response = await apiClient.put<any>(`/schedules/${id}`, backendData);
+      return response.data;
     } catch (error) {
       console.error('Error updating schedule:', error);
       throw error;
