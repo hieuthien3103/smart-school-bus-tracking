@@ -1,22 +1,13 @@
 // src/controllers/scheduleController.js
+const Schedule = require('../models/Schedule');
 const { successResponse, errorResponse } = require('../utils/response');
 
 // GET /api/schedules
 exports.getAll = async (req, res) => {
   try {
-    // TODO: Implement logic
-    const mockData = [
-      {
-        ma_lich: 1,
-        ma_tuyen: 1,
-        ten_tuyen: 'Tuyến 1',
-        ngay_chay: '2025-10-20',
-        gio_bat_dau: '06:30:00',
-        trang_thai_lich: 'cho_chay'
-      }
-    ];
-    
-    return successResponse(res, mockData, 'Lấy danh sách lịch trình thành công');
+    const filters = req.query;
+    const schedules = await Schedule.getAll(filters);
+    return successResponse(res, schedules, 'Lấy danh sách lịch trình thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -26,17 +17,13 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const { id } = req.params;
+    const schedule = await Schedule.getById(id);
     
-    // TODO: Implement logic
-    const mockData = {
-      ma_lich: id,
-      ma_tuyen: 1,
-      ten_tuyen: 'Tuyến 1',
-      ngay_chay: '2025-10-20',
-      gio_bat_dau: '06:30:00'
-    };
+    if (!schedule) {
+      return errorResponse(res, 'Không tìm thấy lịch trình', 404);
+    }
     
-    return successResponse(res, mockData, 'Lấy chi tiết lịch trình thành công');
+    return successResponse(res, schedule, 'Lấy chi tiết lịch trình thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -46,11 +33,8 @@ exports.getById = async (req, res) => {
 exports.getStudents = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // TODO: Implement logic
-    const mockData = [];
-    
-    return successResponse(res, mockData, 'Lấy danh sách học sinh thành công');
+    const students = await Schedule.getStudents(id);
+    return successResponse(res, students, 'Lấy danh sách học sinh thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -60,9 +44,8 @@ exports.getStudents = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const data = req.body;
-    
-    // TODO: Implement logic
-    return successResponse(res, { ma_lich: 1, ...data }, 'Tạo lịch trình thành công', 201);
+    const schedule = await Schedule.create(data);
+    return successResponse(res, schedule, 'Tạo lịch trình thành công', 201);
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -73,9 +56,8 @@ exports.update = async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
-    
-    // TODO: Implement logic
-    return successResponse(res, { ma_lich: id, ...data }, 'Cập nhật lịch trình thành công');
+    const schedule = await Schedule.update(id, data);
+    return successResponse(res, schedule, 'Cập nhật lịch trình thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -87,8 +69,8 @@ exports.updateStatus = async (req, res) => {
     const { id } = req.params;
     const { trang_thai } = req.body;
     
-    // TODO: Implement logic
-    return successResponse(res, { ma_lich: id, trang_thai }, 'Cập nhật trạng thái thành công');
+    const schedule = await Schedule.update(id, { trang_thai });
+    return successResponse(res, schedule, 'Cập nhật trạng thái thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -100,7 +82,7 @@ exports.assignStudents = async (req, res) => {
     const { id } = req.params;
     const { student_ids } = req.body;
     
-    // TODO: Implement logic
+    // TODO: Implement student assignment logic
     return successResponse(res, { message: 'Đã phân công học sinh' }, 'Phân công học sinh thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
@@ -111,9 +93,8 @@ exports.assignStudents = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // TODO: Implement logic
-    return successResponse(res, { message: 'Đã xóa' }, 'Xóa lịch trình thành công');
+    const result = await Schedule.delete(id);
+    return successResponse(res, result, 'Xóa lịch trình thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }
@@ -124,7 +105,7 @@ exports.getStatistics = async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     
-    // TODO: Implement logic
+    // TODO: Implement statistics logic
     const mockData = [];
     
     return successResponse(res, mockData, 'Lấy thống kê thành công');

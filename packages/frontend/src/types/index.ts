@@ -31,17 +31,23 @@ export interface BusLocation {
 }
 
 export interface Schedule {
+  // Database fields (used for API operations)
   id: number;
-  route_id: number;
-  driver_id: number;
-  bus_id: number;
-  schedule_date: string;
-  schedule_type: 'morning' | 'afternoon';
-  start_time: string;
-  end_time: string;
-  total_students: number;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  notes?: string;
+  route_id: number;           // ma_tuyen - ID của tuyến đường
+  driver_id: number;          // ma_tai_xe - ID của tài xế
+  bus_id: number;             // ma_xe - ID của xe buýt
+  schedule_date: string;      // ngay_chay - Ngày thực hiện (YYYY-MM-DD)
+  start_time: string;         // gio_bat_dau - Giờ bắt đầu (HH:mm:ss)
+  end_time: string;           // gio_ket_thuc - Giờ kết thúc (HH:mm:ss)
+  status: 'cho_chay' | 'dang_chay' | 'hoan_thanh' | 'huy'; // trang_thai_lich
+  
+  // Display fields (used for UI - populated from API joins)
+  route?: string;              // ten_tuyen - Tên tuyến từ JOIN
+  driver?: string;             // driver_name - Tên tài xế từ JOIN
+  bus?: string;                // bus_number - Biển số xe từ JOIN
+  students?: number;           // so_hoc_sinh - Số học sinh từ COUNT()
+  time?: string;               // gio_bat_dau (alias for display)
+  
   created_at?: string;
   updated_at?: string;
 }
@@ -87,14 +93,18 @@ export interface Driver {
 }
 
 export interface Bus {
-  id: number;
-  number: string;
-  capacity: number;
-  driver: string;
-  route: string;
-  status: string;
-  lastMaintenance: string;
-  nextMaintenance: string;
+  // Database fields (xebuyt table)
+  id: number;                    // ma_xe
+  license_plate: string;         // bien_so - Biển số xe
+  capacity: number;              // suc_chua - Sức chứa
+  status: 'san_sang' | 'dang_su_dung' | 'bao_duong'; // trang_thai
+  driver_id?: number;            // ma_tai_xe - ID tài xế (nullable)
+  
+  // Display fields (from JOINs or computed)
+  driver_name?: string;          // Tên tài xế từ JOIN
+  route_name?: string;           // Tên tuyến từ JOIN
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Notification {
@@ -117,3 +127,6 @@ export interface FormField {
   required?: boolean;
   defaultValue?: string | number;
 }
+
+// Explicit re-exports to ensure proper module resolution
+export type { User, BusLocation, Schedule, Student, Driver, Bus, Notification };

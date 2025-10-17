@@ -22,7 +22,7 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
   const activeSchedules = scheduleData.filter(s => s.status === 'Hoạt động').length;
   const pausedSchedules = scheduleData.filter(s => s.status === 'Tạm dừng').length; 
 
-  const totalStudents = scheduleData.reduce((sum, s) => sum + s.students, 0);
+  const totalStudents = scheduleData.reduce((sum, s) => sum + (Number(s.students) || 0), 0);
 
   // Show empty state when no data
   if (scheduleData.length === 0) {

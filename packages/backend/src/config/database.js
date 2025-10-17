@@ -39,4 +39,12 @@ async function query(sql, params = []) {
   }
 }
 
-module.exports = { pool, query, testConnection };
+// Export execute method from pool for backward compatibility
+const execute = pool.execute.bind(pool);
+
+module.exports = { 
+  pool, 
+  query, 
+  testConnection,
+  execute 
+};

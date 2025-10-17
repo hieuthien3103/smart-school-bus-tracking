@@ -30,7 +30,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     updateBusLocations, 
     syncBusLocationFromSchedule,
     scheduleData,
-    setScheduleData,
+    addSchedule,
+    updateSchedule,
+    deleteSchedule,
     studentsData: globalStudentsData,
     addStudent,
     updateStudent,
@@ -140,21 +142,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         // Edit existing item
         switch (modalType) {
           case 'schedule':
-            setScheduleData(prev => prev.map(item => 
-              item.id === editingItem.id ? { 
-                ...item,
-                route_id: parseInt(formData.route_id) || item.route_id,
-                driver_id: parseInt(formData.driver_id) || item.driver_id,
-                bus_id: parseInt(formData.bus_id) || item.bus_id,
-                schedule_date: formData.schedule_date || item.schedule_date,
-                schedule_type: formData.schedule_type || item.schedule_type,
-                start_time: formData.start_time || item.start_time,
-                end_time: formData.end_time || item.end_time,
-                total_students: parseInt(formData.total_students) || item.total_students,
-                status: formData.status || item.status,
-                notes: formData.notes || item.notes
-              } : item
-            ));
+            // Use AppDataContext updateSchedule method with database field names
+            updateSchedule(editingItem.id, {
+              start_time: formData.start_time,
+              end_time: formData.end_time,
+              status: formData.status
+            } as any);
             alert('Cập nhật lịch trình thành công!');
             break;
           case 'student':
@@ -200,10 +193,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Cập nhật tài xế thành công!');
             break;
           case 'bus':
-            // Update bus in global context
-            const busUpdate = {
-              ...formData,
-              capacity: parseInt(formData.capacity) || editingItem.capacity
+            // Update bus in global context with correct database fields
+            const busUpdate: Partial<Bus> = {
+              license_plate: formData.license_plate,
+              capacity: parseInt(formData.capacity) || editingItem.capacity,
+              driver_id: formData.driver_id ? parseInt(formData.driver_id) : undefined,
+              status: formData.status as 'san_sang' | 'dang_su_dung' | 'bao_duong'
             };
             updateBus(editingItem.id, busUpdate);
             alert('Cập nhật xe buýt thành công!');
@@ -211,24 +206,19 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         }
       } else {
         // Add new item with unique ID based on existing data
-        let newId: number;
         switch (modalType) {
           case 'schedule':
-            newId = Math.max(...scheduleData.map(s => s.id), 0) + 1;
-            const newSchedule: Schedule = {
-              id: newId,
-              route_id: parseInt(formData.route_id),
-              driver_id: parseInt(formData.driver_id),
-              bus_id: parseInt(formData.bus_id),
+            // Use AppDataContext addSchedule method
+            const newScheduleData: Omit<Schedule, 'id'> = {
+              route_id: parseInt(formData.route_id) || 1,
+              driver_id: parseInt(formData.driver_id) || 1,
+              bus_id: parseInt(formData.bus_id) || 1,
               schedule_date: formData.schedule_date,
-              schedule_type: formData.schedule_type as 'morning' | 'afternoon',
               start_time: formData.start_time,
               end_time: formData.end_time,
-              total_students: parseInt(formData.total_students) || 0,
-              status: (formData.status as 'scheduled' | 'in_progress' | 'completed' | 'cancelled') || 'scheduled',
-              notes: formData.notes
+              status: (formData.status as 'cho_chay' | 'dang_chay' | 'hoan_thanh' | 'huy') || 'cho_chay'
             };
-            setScheduleData(prev => [...prev, newSchedule]);
+            addSchedule(newScheduleData);
             alert('Thêm lịch trình mới thành công!');
             break;
           case 'student':
@@ -274,21 +264,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             alert('Thêm tài xế mới thành công!');
             break;
           case 'bus':
-            // Add bus using global context
-            const newBus = {
-              busNumber: formData.busNumber,
-              model: 'Standard Bus',
-              capacity: parseInt(formData.capacity) || 0,
-              year: 2024,
-              plateNumber: `${formData.busNumber}-SCHOOL`,
-              status: 'Đang hoạt động',
-              currentDriver: '',
-              currentRoute: '',
-              mileage: 0,
-              fuelLevel: 100,
-              lastMaintenance: new Date().toLocaleDateString('vi-VN'),
-              nextMaintenance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'),
-              condition: 'Tốt'
+            // Add bus using global context with correct database fields
+            const newBus: Omit<Bus, 'id'> = {
+              license_plate: formData.license_plate,
+              capacity: parseInt(formData.capacity) || 40,
+              driver_id: formData.driver_id ? parseInt(formData.driver_id) : undefined,
+              status: (formData.status as 'san_sang' | 'dang_su_dung' | 'bao_duong') || 'san_sang'
             };
             addBus(newBus);
             alert('Thêm xe buýt mới thành công!');
@@ -320,7 +301,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     try {
       switch (type) {
         case 'schedule':
-          setScheduleData(prev => prev.filter(item => item.id !== id));
+          deleteSchedule(id);
           alert('Xóa lịch trình thành công!');
           break;
         case 'student':
@@ -352,19 +333,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
           onAddNew={(type) => handleAdd(type)}
         />;
       case 'schedule':
-        // Transform scheduleData to legacy format for ScheduleManagement component
-        const legacyScheduleData = scheduleData.map(s => ({
-          id: s.id,
-          route: `Tuyến ${s.route_id}`,
-          time: s.start_time,
-          students: s.total_students,
-          driver: `Driver ${s.driver_id}`,
-          bus: `Bus ${s.bus_id}`,
-          status: s.status
-        }));
+        // scheduleData from AppDataContext is already transformed to display format
+        // Just pass it directly to ScheduleManagement component
         return (
           <ScheduleManagement
-            scheduleData={legacyScheduleData as any}
+            scheduleData={scheduleData as any}
             onAdd={() => handleAdd('schedule')}
             onEdit={(item) => handleEdit('schedule', item)}
             onDelete={(id) => deleteItem('schedule', id)}
@@ -454,21 +427,6 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             placeholder: 'Chọn tuyến đường cho lịch trình',
             options: generateRouteOptions()
           },
-          { name: 'schedule_date', label: 'Ngày lịch trình', type: 'date', required: true, placeholder: 'Chọn ngày thực hiện lịch trình' },
-          { 
-            name: 'schedule_type', 
-            label: 'Loại lịch trình', 
-            type: 'select', 
-            required: true,
-            placeholder: 'Chọn loại lịch trình',
-            options: [
-              { value: 'morning', label: '🌅 Buổi sáng (Đưa đến trường)' },
-              { value: 'afternoon', label: '🌆 Buổi chiều (Đón về nhà)' }
-            ]
-          },
-          { name: 'start_time', label: 'Giờ bắt đầu', type: 'time', required: true, placeholder: 'VD: 07:00 (giờ bắt đầu chuyến)' },
-          { name: 'end_time', label: 'Giờ kết thúc', type: 'time', required: true, placeholder: 'VD: 08:30 (giờ dự kiến kết thúc)' },
-          { name: 'total_students', label: 'Số học sinh', type: 'number', required: true, placeholder: 'VD: 25 (số học sinh trên chuyến)' },
           { 
             name: 'driver_id', 
             label: 'Tài xế', 
@@ -485,20 +443,22 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             placeholder: 'Chọn xe buýt sử dụng',
             options: generateBusOptions()
           },
+          { name: 'schedule_date', label: 'Ngày lịch trình', type: 'date', required: true, placeholder: 'Chọn ngày thực hiện lịch trình' },
+          { name: 'start_time', label: 'Giờ bắt đầu', type: 'time', required: true, placeholder: 'VD: 07:00 (giờ bắt đầu chuyến)' },
+          { name: 'end_time', label: 'Giờ kết thúc', type: 'time', required: true, placeholder: 'VD: 08:30 (giờ dự kiến kết thúc)' },
           { 
             name: 'status', 
             label: 'Trạng thái', 
             type: 'select', 
             placeholder: 'Chọn trạng thái lịch trình',
             options: [
-              { value: 'scheduled', label: '📅 Đã lên lịch' },
-              { value: 'in_progress', label: '🚌 Đang chạy' },
-              { value: 'completed', label: '✅ Hoàn thành' },
-              { value: 'cancelled', label: '❌ Đã hủy' }
+              { value: 'cho_chay', label: '📅 Chờ chạy' },
+              { value: 'dang_chay', label: '🚌 Đang chạy' },
+              { value: 'hoan_thanh', label: '✅ Hoàn thành' },
+              { value: 'huy', label: '❌ Đã hủy' }
             ], 
             required: true 
-          },
-          { name: 'notes', label: 'Ghi chú', type: 'textarea', required: false, placeholder: 'VD: Lưu ý đặc biệt cho chuyến đi' }
+          }
         ];
       case 'student':
         return [
@@ -596,29 +556,40 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         ];
       case 'bus':
         return [
-          { name: 'busNumber', label: 'Số xe', type: 'text', required: true, placeholder: 'VD: BS001, XB-123.45' },
-          { name: 'capacity', label: 'Sức chứa', type: 'number', required: true, placeholder: 'VD: 45 (số ghế ngồi tối đa)' },
           { 
-            name: 'currentDriver', 
+            name: 'license_plate', 
+            label: 'Biển số xe', 
+            type: 'text', 
+            required: true, 
+            placeholder: 'VD: 30A-10001, 29B-12345' 
+          },
+          { 
+            name: 'capacity', 
+            label: 'Sức chứa', 
+            type: 'number', 
+            required: true, 
+            placeholder: 'VD: 40 (số ghế ngồi tối đa)' 
+          },
+          { 
+            name: 'driver_id', 
             label: 'Tài xế phụ trách', 
             type: 'select', 
-            required: true,
-            placeholder: 'Chọn tài xế phụ trách xe này',
+            required: false,
+            placeholder: 'Chọn tài xế phụ trách xe này (không bắt buộc)',
             options: generateDriverOptions()
           },
           { 
-            name: 'currentRoute', 
-            label: 'Tuyến đường', 
+            name: 'status', 
+            label: 'Trạng thái', 
             type: 'select', 
-            required: true,
-            placeholder: 'Chọn tuyến đường hoạt động',
-            options: generateRouteOptions()
-          },
-          { name: 'status', label: 'Trạng thái', type: 'select', placeholder: 'Chọn trạng thái hoạt động', options: [
-            { value: 'Hoạt động', label: '✅ Hoạt động' },
-            { value: 'Bảo trì', label: '🔧 Bảo trì' },
-            { value: 'Ngừng hoạt động', label: '❌ Ngừng hoạt động' }
-          ], required: true }
+            placeholder: 'Chọn trạng thái xe buýt', 
+            options: [
+              { value: 'san_sang', label: '✅ Sẵn sàng' },
+              { value: 'dang_su_dung', label: '🚌 Đang sử dụng' },
+              { value: 'bao_duong', label: '🔧 Bảo dưỡng' }
+            ], 
+            required: true 
+          }
         ];
       default:
         return [];
