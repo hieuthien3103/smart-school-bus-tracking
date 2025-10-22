@@ -1,14 +1,15 @@
 {
-  "name": "@smart-school-bus/shared",
-  "version": "0.0.0",
+  "name": "@smart/shared",
+  "version": "1.0.0",
   "private": true,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.ts",
+  "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "clean": "rimraf dist"
   },
+  "dependencies": {},
   "devDependencies": {
-    "typescript": "~5.8.3"
+    "typescript": "^5.3.3"
   }
 }

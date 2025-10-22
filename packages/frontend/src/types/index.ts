@@ -48,29 +48,28 @@ export interface Schedule {
   students?: number;           // so_hoc_sinh - Số học sinh từ COUNT()
   time?: string;               // gio_bat_dau (alias for display)
   
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Student {
-  id: number;
-  student_code: string;
-  name: string;
-  grade: string;
-  class: string;
-  date_of_birth: string;
-  gender: 'male' | 'female';
-  address: string;
-  pickup_address: string;
-  dropoff_address: string;
-  school_id: number;
-  route_id?: number;
-  stop_id?: number;
-  status: 'active' | 'inactive' | 'transferred' | 'graduated';
+  id: number; // ma_hs
+  name: string; // ho_ten
+  class: string | null; // lop
+  parent_id: number; // ma_phu_huynh
+  pickup_stop_id: number; // ma_diem_don
+  dropoff_stop_id: number; // ma_diem_tra
+  status: 'hoat_dong' | 'nghi'; // enum trong DB
+
+  //cac truong mo rong sau nay neu muon 
+  grade?: string; // mở rộng: khối học
+  gender?: 'male' | 'female';
+  date_of_birth?: string;
+  address?: string;
   medical_notes?: string;
   allergies?: string;
-  emergency_instructions?: string;
   photo?: string;
+  emergency_instructions?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -79,11 +78,12 @@ export interface Driver {
   id: number;
   name: string;
   phone: string;
-  license_number: string;
+  email: string;
+  license: string;
   experience: number;
   hire_date: string;
   current_bus_id?: number;
-  status: 'active' | 'inactive' | 'on_leave';
+  status: 'san_sang' | 'dang_chay' | 'nghi';
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   address?: string;
@@ -128,5 +128,3 @@ export interface FormField {
   defaultValue?: string | number;
 }
 
-// Explicit re-exports to ensure proper module resolution
-export type { User, BusLocation, Schedule, Student, Driver, Bus, Notification };
