@@ -14,8 +14,11 @@ import Header from '../layout/Header';
 import Modal from '../shared/Modal';
 import Form from '../shared/Form';
 
-import type { User, FormField, Student, Schedule, Driver } from '../../types';
-import { useAppData } from '../../contexts/AppDataContext';
+import type { User, Student, Schedule, Driver } from '../../types';
+import { useStudents } from '../../contexts/StudentsContext';
+import { useDrivers } from '../../contexts/DriversContext';
+import { useBuses } from '../../contexts/BusesContext';
+import { useSchedules } from '../../contexts/SchedulesContext';
 
 
 
@@ -25,27 +28,11 @@ interface AdminAppProps {
 }
 
 export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
-  // Global data context
-  const { 
-    updateBusLocations, 
-    syncBusLocationFromSchedule,
-    scheduleData,
-    addSchedule,
-    updateSchedule,
-    deleteSchedule,
-    studentsData: globalStudentsData,
-    addStudent,
-    updateStudent,
-    deleteStudent,
-    driversData: globalDriversData,
-    addDriver,
-    updateDriver,
-    deleteDriver,
-    busesData: globalBusesData,
-    addBus,
-    updateBus,
-    deleteBus
-  } = useAppData();
+  // Context con hooks
+  const { students, addStudent, updateStudent, deleteStudent } = useStudents();
+  const { drivers, addDriver, updateDriver, deleteDriver } = useDrivers();
+  const { buses, addBus, updateBus, deleteBus } = useBuses();
+  const { schedules, addSchedule, updateSchedule, deleteSchedule } = useSchedules();
 
   // App state
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -58,32 +45,30 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   const [editingItem, setEditingItem] = useState<any>(null);
   
   // Transform data for management components - use global data
-  const studentsData = globalStudentsData.map(student => ({
-    id: student.id,
-    name: student.name || 'Chưa có tên',
-    class: student.class || student.grade || 'Chưa xác định',    // Use new class field
-    route: student.route_id ? `Tuyến ${student.route_id}` : 'Chưa phân tuyến',
-    pickup: student.pickup_address || 'Chưa xác định',
-    dropoff: student.dropoff_address || 'Chưa xác định',
-    parent: 'N/A',  // No longer in database
-    phone: 'N/A',   // No longer in database
-    status: student.status || 'Chưa xác định'
+  const studentsData = students.map((student: Student) => ({
+    ma_hs: student.ma_hs,
+    ho_ten: student.ho_ten || 'Chưa có tên',
+    lop: student.lop || 'Chưa xác định',
+    ma_phu_huynh: student.ma_phu_huynh ? String(student.ma_phu_huynh) : 'N/A',
+    ma_diem_don: student.ma_diem_don || 'Chưa xác định',
+    ma_diem_tra: student.ma_diem_tra || 'Chưa xác định',
+    trang_thai: student.trang_thai || 'Chưa xác định'
   }));
   
   // Transform global drivers data for AdminApp format
-  const driversData = useMemo(() => globalDriversData.map(driver => ({
-    id: driver.id,
-    name: driver.name || 'Chưa có tên',
-    phone: driver.phone || 'Chưa có SĐT',
-    license: driver.license_number || 'Chưa có GPLX',
-    experience: driver.experience || 0,
-    status: driver.status || 'Chưa xác định',
-    currentRoute: driver.current_bus_id ? `Tuyến ${driver.current_bus_id}` : 'Chưa phân tuyến',
-    currentBus: driver.current_bus_id ? `BS${driver.current_bus_id}` : 'Chưa phân xe'
-  })), [globalDriversData]);
+  const driversData = useMemo(() => drivers.map((driver: Driver) => ({
+    ma_tai_xe: driver.ma_tai_xe,
+    ho_ten: driver.ho_ten || 'Chưa có tên',
+    so_dien_thoai: driver.so_dien_thoai || 'Chưa có SĐT',
+    so_gplx: driver.so_gplx || 'Chưa có GPLX',
+    trang_thai: driver.trang_thai || 'Chưa xác định',
+    ma_ql: driver.ma_ql ? `BS${driver.ma_ql}` : 'Chưa phân xe',
+    tai_khoan: driver.tai_khoan || '',
+    mat_khau: driver.mat_khau || ''
+  })), [drivers]);
   
   // Use global buses data directly
-  const busesData = globalBusesData;
+  const busesData = buses;
 
   // Update current time
   React.useEffect(() => {
@@ -94,28 +79,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   }, []);
 
   // Use ref to track sync state and prevent infinite loops
-  const lastSyncRef = React.useRef({ busCount: 0, scheduleCount: 0 });
+  // Removed unused lastSyncRef
 
-  // Sync data with location tracking when data count changes
-  React.useEffect(() => {
-    const currentBusCount = busesData.length;
-    const currentScheduleCount = scheduleData.length;
-    
-    // Only sync if the data counts have actually changed
-    if (currentBusCount !== lastSyncRef.current.busCount) {
-      if (currentBusCount > 0) {
-        updateBusLocations(busesData);
-      }
-      lastSyncRef.current.busCount = currentBusCount;
-    }
-    
-    if (currentScheduleCount !== lastSyncRef.current.scheduleCount) {
-      if (currentScheduleCount > 0) {
-        syncBusLocationFromSchedule(scheduleData);
-      }
-      lastSyncRef.current.scheduleCount = currentScheduleCount;
-    }
-  }, [busesData, scheduleData, updateBusLocations, syncBusLocationFromSchedule]);
+  // Nếu cần đồng bộ vị trí xe buýt, hãy chuyển logic này sang BusesContext hoặc LocationTracking
 
   // CRUD operations
   const handleAdd = (type: 'schedule' | 'student' | 'driver' | 'bus') => {
@@ -142,134 +108,110 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         // Edit existing item
         switch (modalType) {
           case 'schedule':
-            // Use AppDataContext updateSchedule method with database field names
-            updateSchedule(editingItem.id, {
-              start_time: formData.start_time,
-              end_time: formData.end_time,
-              status: formData.status
-            } as any);
+            // UpdateSchedule method with database field names
+            updateSchedule(editingItem.ma_lich_trinh, {
+              ma_tuyen: formData.ma_tuyen,
+              ma_xe: formData.ma_xe,
+              ma_tai_xe: formData.ma_tai_xe,
+              ngay_chay: formData.ngay_chay,
+              gio_bat_dau: formData.gio_bat_dau,
+              gio_ket_thuc: formData.gio_ket_thuc,
+              trang_thai_lich: formData.trang_thai_lich
+            });
             alert('Cập nhật lịch trình thành công!');
             break;
           case 'student':
-            // Update student with new field names
+            // Update student với các trường hợp lệ
             const studentUpdate: Partial<Student> = {
-              student_code: formData.student_code,
-              name: formData.name,
-              grade: formData.grade,
-              class: formData.class,
-              date_of_birth: formData.date_of_birth,
-              gender: formData.gender as 'male' | 'female',
-              address: formData.address,
-              pickup_address: formData.pickup_address,
-              dropoff_address: formData.dropoff_address,
-              school_id: parseInt(formData.school_id),
-              route_id: formData.route_id ? parseInt(formData.route_id) : undefined,
-              stop_id: formData.stop_id ? parseInt(formData.stop_id) : undefined,
-              status: formData.status as 'active' | 'inactive' | 'transferred' | 'graduated',
-              medical_notes: formData.medical_notes,
-              allergies: formData.allergies,
-              emergency_instructions: formData.emergency_instructions,
-              photo: formData.photo
+              ho_ten: formData.ho_ten,
+              lop: formData.lop,
+              ma_phu_huynh: Number(formData.ma_phu_huynh),
+              ma_diem_don: Number(formData.ma_diem_don),
+              ma_diem_tra: Number(formData.ma_diem_tra),
+              trang_thai: formData.trang_thai
             };
-            updateStudent(editingItem.id, studentUpdate);
+            updateStudent(editingItem.ma_hoc_sinh, studentUpdate);
             alert('Cập nhật học sinh thành công!');
             break;
           case 'driver':
-            // Update driver with new field names
+            // Update driver với các trường hợp lệ
             const driverUpdate: Partial<Driver> = {
-              name: formData.name,
-              phone: formData.phone,
-              license_number: formData.license_number,
-              experience: parseInt(formData.experience) || 0,
-              hire_date: formData.hire_date,
-              current_bus_id: formData.current_bus_id ? parseInt(formData.current_bus_id) : undefined,
-              status: formData.status as 'active' | 'inactive' | 'on_leave',
-              emergency_contact_name: formData.emergency_contact_name,
-              emergency_contact_phone: formData.emergency_contact_phone,
-              address: formData.address,
-              notes: formData.notes
+              ho_ten: formData.ho_ten,
+              so_dien_thoai: formData.so_dien_thoai,
+              so_gplx: formData.so_gplx,
+              trang_thai: formData.trang_thai,
+              tai_khoan: formData.tai_khoan,
+              mat_khau: formData.mat_khau,
+              ma_ql: formData.ma_ql ? Number(formData.ma_ql) : null
             };
-            updateDriver(editingItem.id, driverUpdate);
+            updateDriver(editingItem.ma_tai_xe, driverUpdate);
             alert('Cập nhật tài xế thành công!');
             break;
           case 'bus':
             // Update bus in global context with correct database fields
-            const busUpdate: Partial<Bus> = {
-              license_plate: formData.license_plate,
-              capacity: parseInt(formData.capacity) || editingItem.capacity,
-              driver_id: formData.driver_id ? parseInt(formData.driver_id) : undefined,
-              status: formData.status as 'san_sang' | 'dang_su_dung' | 'bao_duong'
+            const busUpdate: Partial<import('../../types').Bus> = {
+              bien_so: formData.bien_so,
+              suc_chua: Number(formData.suc_chua),
+              ma_tai_xe: formData.ma_tai_xe ? Number(formData.ma_tai_xe) : null,
+              trang_thai: formData.trang_thai
             };
-            updateBus(editingItem.id, busUpdate);
+            updateBus(editingItem.ma_xe, busUpdate);
             alert('Cập nhật xe buýt thành công!');
             break;
         }
       } else {
-        // Add new item with unique ID based on existing data
+  // Add new item with correct backend fields
         switch (modalType) {
           case 'schedule':
-            // Use AppDataContext addSchedule method
-            const newScheduleData: Omit<Schedule, 'id'> = {
-              route_id: parseInt(formData.route_id) || 1,
-              driver_id: parseInt(formData.driver_id) || 1,
-              bus_id: parseInt(formData.bus_id) || 1,
-              schedule_date: formData.schedule_date,
-              start_time: formData.start_time,
-              end_time: formData.end_time,
-              status: (formData.status as 'cho_chay' | 'dang_chay' | 'hoan_thanh' | 'huy') || 'cho_chay'
+            // addSchedule method
+            const newScheduleData: Omit<Schedule, 'ma_lich_trinh'> = {
+              ma_lich: Number(formData.ma_lich),
+              ma_tuyen: Number(formData.ma_tuyen),
+              ma_xe: Number(formData.ma_xe),
+              ma_tai_xe: Number(formData.ma_tai_xe),
+              ngay_chay: formData.ngay_chay,
+              gio_bat_dau: formData.gio_bat_dau,
+              gio_ket_thuc: formData.gio_ket_thuc,
+              trang_thai_lich: formData.trang_thai_lich
             };
             addSchedule(newScheduleData);
             alert('Thêm lịch trình mới thành công!');
             break;
           case 'student':
-            // Create new student with new field names
-            const newStudentData: Omit<Student, 'id'> = {
-              student_code: formData.student_code,
-              name: formData.name,
-              grade: formData.grade,
-              class: formData.class,
-              date_of_birth: formData.date_of_birth,
-              gender: formData.gender as 'male' | 'female',
-              address: formData.address,
-              pickup_address: formData.pickup_address,
-              dropoff_address: formData.dropoff_address,
-              school_id: parseInt(formData.school_id),
-              route_id: formData.route_id ? parseInt(formData.route_id) : undefined,
-              stop_id: formData.stop_id ? parseInt(formData.stop_id) : undefined,
-              status: (formData.status as 'active' | 'inactive' | 'transferred' | 'graduated') || 'active',
-              medical_notes: formData.medical_notes,
-              allergies: formData.allergies,
-              emergency_instructions: formData.emergency_instructions,
-              photo: formData.photo
+            // Tạo mới student với các trường hợp lệ
+            const newStudentData: Omit<Student, 'ma_hoc_sinh'> = {
+              ma_hs: formData.ma_hs,
+              ho_ten: formData.ho_ten,
+              lop: formData.lop,
+              ma_phu_huynh: Number(formData.ma_phu_huynh),
+              ma_diem_don: Number(formData.ma_diem_don),
+              ma_diem_tra: Number(formData.ma_diem_tra),
+              trang_thai: formData.trang_thai
             };
             addStudent(newStudentData);
             alert('Thêm học sinh mới thành công!');
             break;
           case 'driver':
-            // Create new driver with new field names
-            const newDriver: Omit<Driver, 'id'> = {
-              name: formData.name,
-              phone: formData.phone,
-              license_number: formData.license_number,
-              experience: parseInt(formData.experience) || 0,
-              hire_date: formData.hire_date,
-              current_bus_id: formData.current_bus_id ? parseInt(formData.current_bus_id) : undefined,
-              status: (formData.status as 'active' | 'inactive' | 'on_leave') || 'active',
-              emergency_contact_name: formData.emergency_contact_name,
-              emergency_contact_phone: formData.emergency_contact_phone,
-              address: formData.address,
-              notes: formData.notes
+            // Tạo mới driver với các trường hợp lệ
+            const newDriver: Omit<Driver, 'ma_tai_xe'> = {
+              ho_ten: formData.ho_ten,
+              so_dien_thoai: formData.so_dien_thoai,
+              so_gplx: formData.so_gplx,
+              trang_thai: formData.trang_thai,
+              tai_khoan: formData.tai_khoan,
+              mat_khau: formData.mat_khau,
+              ma_ql: formData.ma_ql ? Number(formData.ma_ql) : null
             };
             addDriver(newDriver);
             alert('Thêm tài xế mới thành công!');
             break;
           case 'bus':
             // Add bus using global context with correct database fields
-            const newBus: Omit<Bus, 'id'> = {
-              license_plate: formData.license_plate,
-              capacity: parseInt(formData.capacity) || 40,
-              driver_id: formData.driver_id ? parseInt(formData.driver_id) : undefined,
-              status: (formData.status as 'san_sang' | 'dang_su_dung' | 'bao_duong') || 'san_sang'
+            const newBus: Omit<import('../../types').Bus, 'ma_xe'> = {
+              bien_so: formData.bien_so,
+              suc_chua: Number(formData.suc_chua),
+              ma_tai_xe: formData.ma_tai_xe ? Number(formData.ma_tai_xe) : null,
+              trang_thai: formData.trang_thai
             };
             addBus(newBus);
             alert('Thêm xe buýt mới thành công!');
@@ -328,48 +270,34 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     switch (activeTab) {
       case 'dashboard':
         return <AdminDashboard 
-          adminData={{ name: user?.name || '', role: user?.role || '' }} 
+          adminData={{ name: user?.ten || '', role: user?.role || '' }} 
           onNavigate={setActiveTab}
           onAddNew={(type) => handleAdd(type)}
         />;
       case 'schedule':
-        // scheduleData from AppDataContext is already transformed to display format
+  // scheduleData is already transformed to display format
         // Just pass it directly to ScheduleManagement component
         return (
           <ScheduleManagement
-            scheduleData={scheduleData as any}
+            schedules={schedules}
             onAdd={() => handleAdd('schedule')}
             onEdit={(item) => handleEdit('schedule', item)}
             onDelete={(id) => deleteItem('schedule', id)}
           />
         );
       case 'students':
-        return (
-          <StudentManagement
-            studentsData={studentsData}
-            onAdd={() => handleAdd('student')}
-            onEdit={(item) => handleEdit('student', item)}
-            onDelete={(id) => deleteItem('student', id)}
-          />
-        );
+        return <StudentManagement />;
       case 'drivers':
         return (
           <DriverManagement
-            driversData={driversData}
-            onAdd={() => handleAdd('driver')}
-            onEdit={(item) => handleEdit('driver', item)}
-            onDelete={(id) => deleteItem('driver', id)}
+            driversData={drivers}
+            onAdd={handleAdd.bind(null, 'driver')}
+            onEdit={handleEdit.bind(null, 'driver')}
+            onDelete={deleteItem.bind(null, 'driver')}
           />
         );
       case 'buses':
-        return (
-          <BusManagement
-            busesData={busesData}
-            onAdd={() => handleAdd('bus')}
-            onEdit={(item) => handleEdit('bus', item)}
-            onDelete={(id) => deleteItem('bus', id)}
-          />
-        );
+        return <BusManagement busesData={busesData} onAdd={handleAdd.bind(null, 'bus')} onEdit={handleEdit.bind(null, 'bus')} onDelete={deleteItem.bind(null, 'bus')} />;
       case 'tracking':
         return <LocationTracking />;
       case 'notifications':
@@ -380,31 +308,31 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         return <Settings />;
       default:
         return <AdminDashboard 
-          adminData={{ name: user?.name || '', role: user?.role || '' }} 
+          adminData={{ name: user?.ten || '', role: user?.role || '' }} 
           onNavigate={setActiveTab}
           onAddNew={(type) => handleAdd(type)}
         />;
     }
-  }, [activeTab, user, scheduleData, studentsData, driversData, busesData]);
+  }, [activeTab, user, schedules, studentsData, driversData, busesData]);
 
   // Generate dynamic options from current data
   const generateDriverOptions = () => {
-    return driversData.map(driver => ({
-      value: driver.name,
-      label: `${driver.name} (${driver.experience} năm kinh nghiệm)`
+    return driversData.map((driver) => ({
+      value: driver.ho_ten,
+      label: `${driver.ho_ten}`
     }));
   };
 
   const generateBusOptions = () => {
     return busesData.map(bus => ({
-      value: bus.busNumber,
-      label: `${bus.busNumber} (${bus.capacity} chỗ ngồi)`
+      value: bus.bien_so,
+      label: `${bus.bien_so} (${bus.suc_chua} chỗ ngồi)`
     }));
   };
 
   const generateRouteOptions = () => {
     // Get unique routes from existing schedules + default routes
-    const existingRoutes = scheduleData.map(s => `Tuyến ${s.route_id}`);
+  const existingRoutes = schedules.map((s: Schedule) => `Tuyến ${s.ma_tuyen}`);
     const defaultRoutes = ['Tuyến A1', 'Tuyến B2', 'Tuyến C3', 'Tuyến D4', 'Tuyến E5'];
     const allRoutes = [...new Set([...defaultRoutes, ...existingRoutes])];
     
@@ -415,7 +343,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
   };
 
   // Get form fields for modal
-  const getFormFields = (): FormField[] => {
+  // Replace with correct type or any if FormField is not defined
+  const getFormFields = (): any[] => {
     switch (modalType) {
       case 'schedule':
         return [

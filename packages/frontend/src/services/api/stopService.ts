@@ -1,39 +1,38 @@
-import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api';
+import { apiClient } from './client';
+import type { Stop, StopType } from '../../types';
 
-export interface Stop {
-    id: string;
-    name: string;
-    location: {
-        lat: number;
-        lng: number;
-    };
-    address: string;
-    routeId: string;
-}
+export type CreateStopDto = Omit<Stop, 'ma_tram'>;
+export type UpdateStopDto = Partial<CreateStopDto>;
 
-export const getStops = async (routeId?: string): Promise<Stop[]> => {
-    const url = routeId ? `${API_BASE_URL}/stops?routeId=${routeId}` : `${API_BASE_URL}/stops`;
-    const response = await axios.get<Stop[]>(url);
-    return response.data;
-};
+export const stopService = {
+    // Get all stops
+    async getStops(params?: {
+        page?: number;
+        limit?: number;
+        loai_tram?: StopType;
+        search?: string;
+    }): Promise<Stop[]> {
+        return apiClient.get<Stop[]>('/tramxe', { params });
+    },
 
-export const getStopById = async (id: string): Promise<Stop> => {
-    const response = await axios.get<Stop>(`${API_BASE_URL}/stops/${id}`);
-    return response.data;
-};
+    // Get stop by ID
+    async getStopById(ma_tram: number): Promise<Stop> {
+        return apiClient.get<Stop>(`/tramxe/${ma_tram}`);
+    },
 
-export const createStop = async (stop: Omit<Stop, 'id'>): Promise<Stop> => {
-    const response = await axios.post<Stop>(`${API_BASE_URL}/stops`, stop);
-    return response.data;
-};
+    // Create new stop
+    async createStop(data: CreateStopDto): Promise<Stop> {
+        return apiClient.post<Stop>('/tramxe', data);
+    },
 
-export const updateStop = async (id: string, stop: Partial<Omit<Stop, 'id'>>): Promise<Stop> => {
-    const response = await axios.put<Stop>(`${API_BASE_URL}/stops/${id}`, stop);
-    return response.data;
-};
+    // Update stop
+    async updateStop(ma_tram: number, data: UpdateStopDto): Promise<Stop> {
+        return apiClient.put<Stop>(`/tramxe/${ma_tram}`, data);
+    },
 
-export const deleteStop = async (id: string): Promise<void> => {
-    await axios.delete(`${API_BASE_URL}/stops/${id}`);
+    // Delete stop
+    async deleteStop(ma_tram: number): Promise<void> {
+        return apiClient.delete<void>(`/tramxe/${ma_tram}`);
+    }
 };

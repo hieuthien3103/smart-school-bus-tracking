@@ -120,12 +120,12 @@ export const reportsService = {
       const students = studentsResponse.status === 'fulfilled' ? (studentsResponse.value as any)?.data?.length || 0 : 0;
 
       return {
-        totalTrips: 8850,
-        activeStudents: students || 2590,
-        totalRevenue: 268500000,
-        onTimePercentage: 93,
-        totalBuses: buses || 12,
-        activeDrivers: drivers || 8
+        totalTrips: 0, // TODO: Get from API if available
+        activeStudents: students,
+        totalRevenue: 0, // TODO: Get from API if available
+        onTimePercentage: 0, // TODO: Get from API if available
+        totalBuses: buses,
+        activeDrivers: drivers
       };
     } catch (error) {
       console.error('Error fetching report stats:', error);

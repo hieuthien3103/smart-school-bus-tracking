@@ -1,72 +1,41 @@
-﻿import apiClient from './client';
-import type { Schedule } from '../../types';
+﻿
+import { apiClient } from './client';
+import type { Schedule, ScheduleStatus } from '../../types';
 
-// Interface for creating schedule
-export interface ScheduleCreateData {
-  route_id: number;
-  bus_id: number;
-  driver_id: number;
-  schedule_date: string;
-  start_time: string;
-  departure_time: string;
-  trip_type: 'morning' | 'afternoon' | 'evening';
-  status: string;
-}
+export type CreateScheduleDto = Omit<Schedule, 'ma_lich'>;
+export type UpdateScheduleDto = Partial<CreateScheduleDto>;
 
-class ScheduleService {
+export const scheduleService = {
   // Get all schedules
-  async getAllSchedules(): Promise<Schedule[]> {
-    try {
-      const response = await apiClient.get<Schedule[]>('/schedules');
-      return response;
-    } catch (error) {
-      console.error('Error fetching schedules:', error);
-      throw error;
-    }
-  }
+  async getSchedules(params?: {
+    page?: number;
+    limit?: number;
+    trang_thai_lich?: ScheduleStatus;
+    ma_tuyen?: number;
+    ma_xe?: number;
+    ma_tai_xe?: number;
+    ngay_chay?: string;
+  }): Promise<Schedule[]> {
+    return apiClient.get<Schedule[]>('/lichtrinh', { params });
+  },
 
   // Get schedule by ID
-  async getScheduleById(id: number): Promise<Schedule | null> {
-    try {
-      const response = await apiClient.get<Schedule>(`/schedules/${id}`);
-      return response;
-    } catch (error) {
-      console.error('Error fetching schedule:', error);
-      throw error;
-    }
-  }
+  async getScheduleById(ma_lich: number): Promise<Schedule> {
+    return apiClient.get<Schedule>(`/lichtrinh/${ma_lich}`);
+  },
 
   // Create new schedule
-  async createSchedule(scheduleData: ScheduleCreateData): Promise<Schedule> {
-    try {
-      const response = await apiClient.post<Schedule>('/schedules', scheduleData);
-      return response;
-    } catch (error) {
-      console.error('Error creating schedule:', error);
-      throw error;
-    }
-  }
+  async createSchedule(data: CreateScheduleDto): Promise<Schedule> {
+    return apiClient.post<Schedule>('/lichtrinh', data);
+  },
 
   // Update schedule
-  async updateSchedule(id: number, scheduleData: Partial<ScheduleCreateData>): Promise<Schedule> {
-    try {
-      const response = await apiClient.put<Schedule>(`/schedules/${id}`, scheduleData);
-      return response;
-    } catch (error) {
-      console.error('Error updating schedule:', error);
-      throw error;
-    }
-  }
+  async updateSchedule(ma_lich: number, data: UpdateScheduleDto): Promise<Schedule> {
+    return apiClient.put<Schedule>(`/lichtrinh/${ma_lich}`, data);
+  },
 
   // Delete schedule
-  async deleteSchedule(id: number): Promise<void> {
-    try {
-      await apiClient.delete(`/schedules/${id}`);
-    } catch (error) {
-      console.error('Error deleting schedule:', error);
-      throw error;
-    }
+  async deleteSchedule(ma_lich: number): Promise<void> {
+    return apiClient.delete<void>(`/lichtrinh/${ma_lich}`);
   }
-}
-
-export default new ScheduleService();
+};

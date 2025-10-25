@@ -3,8 +3,16 @@ import Login from './components/auth/Login';
 import { AdminApp } from './components/apps/AdminApp';
 import { ParentApp } from './components/apps/ParentApp';
 import { DriverApp } from './components/apps/DriverApp';
-import { AppDataProvider } from './contexts/AppDataContext';
+import { StudentsProvider } from './contexts/StudentsContext';
+import { DriversProvider } from './contexts/DriversContext';
+import { BusesProvider } from './contexts/BusesContext';
+import { SchedulesProvider } from './contexts/SchedulesContext';
+import { StopsProvider } from './contexts/StopsContext';
+import { ParentsProvider } from './contexts/ParentsContext';
+import { RoutesProvider } from './contexts/RoutesContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
 import { useAuth } from './hooks';
+
 
 const App = () => {
   // Authentication using custom hook
@@ -46,9 +54,23 @@ const App = () => {
   };
 
   return (
-    <AppDataProvider>
-      {renderApp()}
-    </AppDataProvider>
+    <ParentsProvider>
+      <StopsProvider>
+        <BusesProvider>
+          <DriversProvider>
+            <StudentsProvider>
+              <SchedulesProvider>
+                <RoutesProvider>
+                  <NotificationsProvider>
+                  {renderApp()}
+                  </NotificationsProvider>
+                </RoutesProvider>
+              </SchedulesProvider>
+            </StudentsProvider>
+          </DriversProvider>
+        </BusesProvider>
+      </StopsProvider>
+    </ParentsProvider>
   );
 };
 

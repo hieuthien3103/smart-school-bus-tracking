@@ -1,130 +1,286 @@
-// Central type definitions for Smart School Bus System
+
+// ================= Database-aligned Types =================
+
+export type UserRole = 'admin' | 'driver' | 'parent';
 
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'parent' | 'driver';
-  permissions?: string[];  // Added permissions property for API integration
-  avatar?: string;
-  phone?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  ten: string;
+  id: number;
+  username: string;
+  role: UserRole;
 }
 
-export interface BusLocation {
-  id: number;
-  busNumber: string;
-  driver: string;
-  route: string;
-  lat: number;
-  lng: number;
-  speed: number;
-  direction: number;
-  status: 'Đang di chuyển' | 'Dừng đón khách' | 'Sự cố' | 'Nghỉ trưa';
-  students: number;
-  lastUpdate: string;
-  nextStop: string;
-  estimatedArrival: string;
-  routeStops: string[];
-  currentStopIndex: number;
+// ==================== PHỤ HUYNH (PARENTS) ====================
+export interface Parent {
+  ma_phu_huynh: number;
+  ho_ten: string;
+  so_dien_thoai: string;
+  email: string | null;
+  dia_chi: string | null;
+  tai_khoan: string;
+  mat_khau: string;
 }
 
-export interface Schedule {
-  // Database fields (used for API operations)
-  id: number;
-  route_id: number;           // ma_tuyen - ID của tuyến đường
-  driver_id: number;          // ma_tai_xe - ID của tài xế
-  bus_id: number;             // ma_xe - ID của xe buýt
-  schedule_date: string;      // ngay_chay - Ngày thực hiện (YYYY-MM-DD)
-  start_time: string;         // gio_bat_dau - Giờ bắt đầu (HH:mm:ss)
-  end_time: string;           // gio_ket_thuc - Giờ kết thúc (HH:mm:ss)
-  status: 'cho_chay' | 'dang_chay' | 'hoan_thanh' | 'huy'; // trang_thai_lich
-  
-  // Display fields (used for UI - populated from API joins)
-  route?: string;              // ten_tuyen - Tên tuyến từ JOIN
-  driver?: string;             // driver_name - Tên tài xế từ JOIN
-  bus?: string;                // bus_number - Biển số xe từ JOIN
-  students?: number;           // so_hoc_sinh - Số học sinh từ COUNT()
-  time?: string;               // gio_bat_dau (alias for display)
-  
-  createdAt?: string;
-  updatedAt?: string;
-}
+// ==================== HỌC SINH (STUDENTS) ====================
+export type StudentStatus = 'hoat_dong' | 'nghi';
 
 export interface Student {
-  id: number; // ma_hs
-  name: string; // ho_ten
-  class: string | null; // lop
-  parent_id: number; // ma_phu_huynh
-  pickup_stop_id: number; // ma_diem_don
-  dropoff_stop_id: number; // ma_diem_tra
-  status: 'hoat_dong' | 'nghi'; // enum trong DB
-
-  //cac truong mo rong sau nay neu muon 
-  grade?: string; // mở rộng: khối học
-  gender?: 'male' | 'female';
-  date_of_birth?: string;
-  address?: string;
-  medical_notes?: string;
-  allergies?: string;
-  photo?: string;
-  emergency_instructions?: string;
-  created_at?: string;
-  updated_at?: string;
+  ma_hs: number;
+  ho_ten: string;
+  lop: string | null;
+  ma_phu_huynh: number;
+  ma_diem_don: number;  // ID trạm đón
+  ma_diem_tra: number;  // ID trạm trả
+  trang_thai: StudentStatus;
+  
+  // Relations (populated từ API)
+  phu_huynh?: Parent;
+  diem_don?: Stop;
+  diem_tra?: Stop;
 }
+
+// ==================== QUẢN LÝ TÀI XẾ ====================
+export interface DriverManager {
+  ma_ql: number;
+  ho_ten: string;
+  so_dien_thoai: string;
+  email: string | null;
+  tai_khoan: string;
+  mat_khau: string;
+  dia_chi: string | null;
+}
+
+// ==================== TÀI XẾ (DRIVERS) ====================
+export type DriverStatus = 'san_sang' | 'dang_chay' | 'nghi';
 
 export interface Driver {
-  id: number;
-  name: string;
-  phone: string;
-  email: string;
-  license: string;
-  experience: number;
-  hire_date: string;
-  current_bus_id?: number;
-  status: 'san_sang' | 'dang_chay' | 'nghi';
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  address?: string;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
+  ma_tai_xe: number;
+  ho_ten: string;
+  so_dien_thoai: string;
+  so_gplx: string;
+  trang_thai: DriverStatus;
+  tai_khoan: string;
+  mat_khau: string;
+  ma_ql: number | null;
+  
+  // Relations
+  quan_ly?: DriverManager;
 }
+
+// ==================== XE BUÝT (BUSES) ====================
+export type BusStatus = 'san_sang' | 'dang_su_dung' | 'bao_duong';
 
 export interface Bus {
-  // Database fields (xebuyt table)
-  id: number;                    // ma_xe
-  license_plate: string;         // bien_so - Biển số xe
-  capacity: number;              // suc_chua - Sức chứa
-  status: 'san_sang' | 'dang_su_dung' | 'bao_duong'; // trang_thai
-  driver_id?: number;            // ma_tai_xe - ID tài xế (nullable)
+  ma_xe: number;
+  bien_so: string;
+  suc_chua: number;
+  trang_thai: 'san_sang' | 'dang_su_dung' | 'bao_duong'; // ✅ trạng thái từ DB
+  ma_tai_xe: number | null;
   
-  // Display fields (from JOINs or computed)
-  driver_name?: string;          // Tên tài xế từ JOIN
-  route_name?: string;           // Tên tuyến từ JOIN
-  created_at?: string;
-  updated_at?: string;
+  // Relations
+  tai_xe?: Driver;
+  vi_tri_hien_tai?: BusLocation;
 }
 
+// ==================== TRẠM XE (STOPS) ====================
+export type StopType = 'don' | 'tra' | 'ca_hai';
+
+export interface Stop {
+  ma_tram: number;
+  ten_tram: string;
+  dia_chi: string | null;
+  loai_tram: StopType;
+}
+
+// ==================== TUYẾN ĐƯỜNG (ROUTES) ====================
+export interface Route {
+  ma_tuyen: number;
+  ten_tuyen: string;
+  diem_bat_dau: string | null;
+  diem_ket_thuc: string | null;
+  do_dai_km: number | null;
+  
+  // Relations
+  chi_tiet_tuyen?: RouteDetail[];
+}
+
+// ==================== CHI TIẾT TUYẾN ĐƯỜNG ====================
+export interface RouteDetail {
+  ma_ct: number;
+  ma_tuyen: number;
+  ma_tram: number;
+  thu_tu: number;  // Thứ tự trạm trong tuyến
+  
+  // Relations
+  tram?: Stop;
+}
+
+// ==================== LỊCH TRÌNH (SCHEDULES) ====================
+export type ScheduleStatus = 'cho_chay' | 'dang_chay' | 'hoan_thanh' | 'huy';
+
+export interface Schedule {
+  ma_lich: number;
+  ma_tuyen: number | null;
+  ma_xe: number | null;
+  ma_tai_xe: number | null;
+  ngay_chay: string;  // Date format: YYYY-MM-DD
+  gio_bat_dau: string;  // Time format: HH:mm:ss
+  gio_ket_thuc: string | null;
+  trang_thai_lich: 'cho_chay' | 'dang_chay' | 'hoan_thanh' | 'huy'; // ✅ trạng thái từ DB
+  
+  // Relations
+  tuyen?: Route;
+  xe?: Bus;
+  tai_xe?: Driver;
+  phan_cong?: Assignment[];
+}
+
+// ==================== PHÂN CÔNG (ASSIGNMENTS) ====================
+export interface Assignment {
+  ma_pc: number;
+  ma_hs: number | null;
+  ma_lich: number | null;
+  
+  // Relations
+  hoc_sinh?: Student;
+  lich_trinh?: Schedule;
+}
+
+// ==================== NHẬT KÝ ĐÓN TRẢ ====================
+export type ShiftType = 'sang' | 'chieu';
+export type PickupStatus = 'cho' | 'da_don' | 'vang';
+export type DropoffStatus = 'cho' | 'da_tra' | 'vang';
+
+export interface PickupDropoffLog {
+  ma_nhat_ky: number;
+  ma_hs: number | null;
+  ma_lich: number | null;
+  ca_don_tra: ShiftType;
+  trang_thai_don: PickupStatus;
+  trang_thai_tra: DropoffStatus;
+  thoi_gian: string;  // Timestamp
+  
+  // Relations
+  hoc_sinh?: Student;
+  lich_trinh?: Schedule;
+}
+
+// ==================== VỊ TRÍ XE (BUS LOCATION) ====================
+export interface BusLocation {
+  ma_vitri: number;
+  ma_xe: number | null;
+  vi_do: number | null;  // Latitude
+  kinh_do: number | null;  // Longitude
+  toc_do: number | null;  // Speed (km/h)
+  thoi_gian: string;  // Timestamp
+  
+  // Relations
+  xe?: Bus;
+}
+
+// ==================== THÔNG BÁO (NOTIFICATIONS) ====================
 export interface Notification {
-  id: number;
-  type: 'info' | 'warning' | 'error' | 'success';
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  busNumber?: string;
-  route?: string;
+  ma_tb: number;
+  noi_dung: string | null;
+  thoi_gian: string;  // Timestamp
+  ma_phu_huynh: number | null;
+  ma_tai_xe: number | null;
+  
+  // Relations
+  phu_huynh?: Parent;
+  tai_xe?: Driver;
 }
 
-export interface FormField {
-  name: string;
-  type: 'text' | 'time' | 'number' | 'select' | 'date' | 'textarea';
-  label?: string;
-  placeholder?: string;
-  options?: { value: string; label: string }[];
-  required?: boolean;
-  defaultValue?: string | number;
+// ==================== API RESPONSE TYPES ====================
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// ==================== AUTH TYPES ====================
+export interface LoginRequest {
+  tai_khoan: string;
+  mat_khau: string;
+  role: UserRole;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  data: {
+    user: User;
+    token: string;
+  };
+  message?: string;
+}
+
+// ==================== REAL-TIME TRACKING TYPES ====================
+export interface BusTrackingData {
+  ma_xe: number;
+  bien_so: string;
+  vi_tri: {
+    vi_do: number;
+    kinh_do: number;
+    toc_do: number;
+    thoi_gian: string;
+  };
+  lich_trinh?: Schedule;
+  hoc_sinh_tren_xe?: Student[];
+}
+
+// ==================== FILTER & SEARCH TYPES ====================
+export interface BusFilter {
+  trang_thai?: BusStatus[];
+  ma_tai_xe?: number;
+  search?: string;
+}
+
+export interface StudentFilter {
+  lop?: string;
+  trang_thai?: StudentStatus;
+  ma_phu_huynh?: number;
+  search?: string;
+}
+
+export interface ScheduleFilter {
+  ngay_chay?: string;
+  trang_thai_lich?: ScheduleStatus[];
+  ma_tuyen?: number;
+  ma_tai_xe?: number;
+}
+
+// ==================== FORM TYPES ====================
+export interface StudentFormData {
+  ho_ten: string;
+  lop: string;
+  ma_phu_huynh: number;
+  ma_diem_don: number;
+  ma_diem_tra: number;
+}
+
+export interface BusFormData {
+  bien_so: string;
+  suc_chua: number;
+  ma_tai_xe?: number;
+}
+
+export interface ScheduleFormData {
+  ma_tuyen: number;
+  ma_xe: number;
+  ma_tai_xe: number;
+  ngay_chay: string;
+  gio_bat_dau: string;
+  gio_ket_thuc?: string;
+}

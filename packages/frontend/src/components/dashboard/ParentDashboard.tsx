@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Clock, User, Bus, Route, Phone, AlertCircle } from 'lucide-react';
-import { useAppData } from '../../contexts/AppDataContext';
+// import { useAppData } from '../../contexts/AppDataContext';
 
 interface StudentInfo {
   id: number;

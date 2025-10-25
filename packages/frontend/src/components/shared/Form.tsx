@@ -1,4 +1,4 @@
-interface FormField {
+export interface FormField {
   name: string;
   type: 'text' | 'time' | 'number' | 'select' | 'date' | 'textarea';
   placeholder?: string;

@@ -19,11 +19,10 @@ export const useAuth = () => {
       if (account) {
         const [role] = account;
         const userData: User = {
-          id: `${role}-1`,
-          name: DEMO_ACCOUNTS[role as keyof typeof DEMO_ACCOUNTS].displayName,
-          email: `${role}@schoolbus.com`,
+          id: 1, // or use a demo numeric id
+          username: DEMO_ACCOUNTS[role as keyof typeof DEMO_ACCOUNTS].displayName,
           role: role as 'admin' | 'parent' | 'driver',
-          avatar: `https://ui-avatars.com/api/?name=${role}&background=3b82f6&color=fff`
+          ten: ''
         };
         setUser(userData);
         return true;

@@ -1,16 +1,19 @@
+// services/api/client.ts
+
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { API_CONFIG } from './config';
+import { API_CONFIG, ERROR_MESSAGES } from './config';
 
 // API Response Types
 export interface ApiResponse<T = any> {
-  data: T;
-  message: string;
-  status: number;
-  timestamp: string;
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 export interface PaginatedResponse<T> {
+  success: boolean;
   data: T[];
   pagination: {
     page: number;
@@ -40,6 +43,9 @@ class ApiClient {
       },
     });
 
+    // Load token from localStorage on initialization
+    this.token = localStorage.getItem('auth_token');
+    
     this.setupInterceptors();
   }
 
@@ -50,6 +56,15 @@ class ApiClient {
         if (this.token) {
           config.headers.Authorization = `Bearer ${this.token}`;
         }
+        
+        // Add timestamp to prevent caching
+        if (config.method === 'get') {
+          config.params = {
+            ...config.params,
+            _t: Date.now(),
+          };
+        }
+        
         return config;
       },
       (error) => {
@@ -59,19 +74,33 @@ class ApiClient {
 
     // Response interceptor - handle common errors
     this.client.interceptors.response.use(
-      (response: AxiosResponse<ApiResponse>) => {
+      (response: AxiosResponse) => {
         return response;
       },
       async (error) => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized - logout user
+        const originalRequest = error.config;
+        
+        // Handle 401 Unauthorized
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
           this.clearToken();
-          window.location.href = '/login';
+          
+          // Redirect to login
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          
+          return Promise.reject(this.formatError(error));
         }
         
+        // Handle 403 Forbidden
         if (error.response?.status === 403) {
-          // Handle forbidden
-          console.error('Access forbidden');
+          console.error('Access forbidden:', error.response.data?.message);
+        }
+
+        // Handle network errors
+        if (!error.response) {
+          console.error('Network error:', error.message);
         }
 
         return Promise.reject(this.formatError(error));
@@ -80,23 +109,29 @@ class ApiClient {
   }
 
   private formatError(error: any): ApiError {
+    // Response error (4xx, 5xx)
     if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data;
+      
       return {
-        message: error.response.data?.message || 'API Error',
-        status: error.response.status,
-        code: error.response.data?.code,
-        details: error.response.data?.details,
+        message: data?.message || data?.error || this.getErrorMessage(status),
+        status,
+        code: data?.code,
+        details: data?.details,
       };
     }
     
+    // Request error (network issue)
     if (error.request) {
       return {
-        message: 'Network Error - Unable to connect to server',
+        message: ERROR_MESSAGES.NETWORK_ERROR,
         status: 0,
         code: 'NETWORK_ERROR',
       };
     }
     
+    // Unknown error
     return {
       message: error.message || 'Unknown Error',
       status: 0,
@@ -104,7 +139,28 @@ class ApiClient {
     };
   }
 
-  // Auth methods
+  private getErrorMessage(status: number): string {
+    switch (status) {
+      case 400:
+        return 'Yêu cầu không hợp lệ';
+      case 401:
+        return ERROR_MESSAGES.UNAUTHORIZED;
+      case 403:
+        return ERROR_MESSAGES.FORBIDDEN;
+      case 404:
+        return ERROR_MESSAGES.NOT_FOUND;
+      case 408:
+        return ERROR_MESSAGES.TIMEOUT;
+      case 500:
+      case 502:
+      case 503:
+        return ERROR_MESSAGES.SERVER_ERROR;
+      default:
+        return 'Đã xảy ra lỗi';
+    }
+  }
+
+  // ==================== AUTH METHODS ====================
   setToken(token: string) {
     this.token = token;
     localStorage.setItem('auth_token', token);
@@ -113,6 +169,7 @@ class ApiClient {
   clearToken() {
     this.token = null;
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
   }
 
   getToken(): string | null {
@@ -122,60 +179,171 @@ class ApiClient {
     return this.token;
   }
 
-  // HTTP Methods
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.get(url, config);
-    // Backend returns { success, message, data }
-    return response.data;
+  isAuthenticated(): boolean {
+    return !!this.getToken();
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.post(url, data, config);
-    return response.data;
+  // ==================== HTTP METHODS ====================
+  async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.client.get(url, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.put(url, data, config);
-    return response.data;
+  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.client.post(url, data, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.patch(url, data, config);
-    return response.data;
+  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.client.put(url, data, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.delete(url, config);
-    return response.data;
+  async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.client.patch(url, data, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  // Paginated requests
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.client.delete(url, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // ==================== PAGINATED REQUESTS ====================
   async getPaginated<T>(
     url: string, 
     params?: { page?: number; limit?: number; [key: string]: any }
   ): Promise<PaginatedResponse<T>> {
-    const response = await this.client.get<ApiResponse<PaginatedResponse<T>>>(url, { params });
-    return response.data.data;
+    try {
+      const response = await this.client.get<PaginatedResponse<T>>(url, { params });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  // File upload
-  async uploadFile<T>(url: string, file: File, onProgress?: (progress: number) => void): Promise<T> {
-    const formData = new FormData();
-    formData.append('file', file);
+  // ==================== FILE UPLOAD ====================
+  async uploadFile<T>(
+    url: string, 
+    file: File, 
+    onProgress?: (progress: number) => void
+  ): Promise<ApiResponse<T>> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const response = await this.client.post<ApiResponse<T>>(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(progress);
+      const response = await this.client.post<ApiResponse<T>>(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // ==================== MULTIPLE FILE UPLOAD ====================
+  async uploadFiles<T>(
+    url: string, 
+    files: File[], 
+    onProgress?: (progress: number) => void
+  ): Promise<ApiResponse<T>> {
+    try {
+      const formData = new FormData();
+      files.forEach((file, index) => {
+        formData.append(`files[${index}]`, file);
+      });
+
+      const response = await this.client.post<ApiResponse<T>>(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // ==================== BATCH REQUESTS ====================
+  async batch<T>(requests: Promise<any>[]): Promise<T[]> {
+    try {
+      const results = await Promise.allSettled(requests);
+      return results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          console.error(`Batch request ${index} failed:`, result.reason);
+          return null;
         }
-      },
-    });
+      }).filter(Boolean);
+    } catch (error) {
+      throw error;
+    }
+  }
 
-    return response.data.data;
+  // ==================== RETRY LOGIC ====================
+  async retryRequest<T>(
+    requestFn: () => Promise<T>,
+    maxRetries: number = API_CONFIG.RETRY_ATTEMPTS,
+    delay: number = API_CONFIG.RETRY_DELAY
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await requestFn();
+      } catch (error: any) {
+        lastError = error;
+        
+        // Don't retry on client errors (4xx)
+        if (error.status >= 400 && error.status < 500) {
+          throw error;
+        }
+        
+        // Wait before retry
+        if (i < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        }
+      }
+    }
+    
+    throw lastError;
   }
 }
 

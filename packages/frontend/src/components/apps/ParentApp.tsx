@@ -16,7 +16,7 @@ export const ParentApp: React.FC<ParentAppProps> = ({ user, onLogout }) => {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-xl font-semibold text-gray-900">Smart School Bus - Phụ huynh</h1>
-              <p className="text-sm text-gray-600">Xin chào, {user?.name}</p>
+              <p className="text-sm text-gray-600">Xin chào, {user?.ten}</p>
             </div>
             <button
               onClick={onLogout}

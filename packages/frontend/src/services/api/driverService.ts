@@ -1,80 +1,39 @@
+
 import { apiClient } from './client';
+import type { Driver } from '../../types';
 
-// Driver Types
-export interface Driver {
-  id: number;
-  name: string;
-  phone: string;
-  license_number: string;
-  experience: number;
-  hire_date: string;
-  current_bus_id?: number;
-  status: 'active' | 'inactive' | 'on_leave';
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  address?: string;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+// DTOs for create/update
+export type CreateDriverDto = Omit<Driver, 'ma_tai_xe'>;
+export type UpdateDriverDto = Partial<CreateDriverDto>;
 
-export interface CreateDriverDto {
-  name: string;
-  phone: string;
-  license_number: string;
-  experience: number;
-  hire_date: string;
-  current_bus_id?: number;
-  status?: 'active' | 'inactive' | 'on_leave';
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  address?: string;
-  notes?: string;
-}
-
-export interface UpdateDriverDto {
-  name?: string;
-  phone?: string;
-  license_number?: string;
-  experience?: number;
-  hire_date?: string;
-  current_bus_id?: number;
-  status?: 'active' | 'inactive' | 'on_leave';
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  address?: string;
-  notes?: string;
-}
-
-// Driver Service
 export const driverService = {
   // Get all drivers
   async getDrivers(params?: {
     page?: number;
     limit?: number;
-    status?: string;
-  }) {
-    return apiClient.get('/drivers', { params });
+    trang_thai?: 'san_sang' | 'dang_chay' | 'nghi';
+  }): Promise<Driver[]> {
+    return apiClient.get<Driver[]>('/taixe', { params });
   },
 
   // Get driver by ID
-  async getDriverById(id: number) {
-    return apiClient.get(`/drivers/${id}`);
+  async getDriverById(ma_tai_xe: number): Promise<Driver> {
+    return apiClient.get<Driver>(`/taixe/${ma_tai_xe}`);
   },
 
   // Create new driver
-  async createDriver(data: CreateDriverDto) {
-    return apiClient.post('/drivers', data);
+  async createDriver(data: CreateDriverDto): Promise<Driver> {
+    return apiClient.post<Driver>('/taixe', data);
   },
 
   // Update driver
-  async updateDriver(id: number, data: UpdateDriverDto) {
-    return apiClient.put(`/drivers/${id}`, data);
+  async updateDriver(ma_tai_xe: number, data: UpdateDriverDto): Promise<Driver> {
+    return apiClient.put<Driver>(`/taixe/${ma_tai_xe}`, data);
   },
 
   // Delete driver
-  async deleteDriver(id: number) {
-    return apiClient.delete(`/drivers/${id}`);
+  async deleteDriver(ma_tai_xe: number): Promise<void> {
+    return apiClient.delete<void>(`/taixe/${ma_tai_xe}`);
   }
 };
 

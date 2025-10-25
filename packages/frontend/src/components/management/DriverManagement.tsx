@@ -1,15 +1,5 @@
 import { Plus, Edit, Trash2, User, Phone, Car, Clock } from 'lucide-react';
-
-interface Driver {
-  id: number;
-  name: string;
-  phone: string;
-  license: string;
-  experience: number;
-  status: string;
-  currentRoute?: string;
-  currentBus?: string;
-}
+import type { Driver } from '../../types';
 
 interface DriverManagementProps {
   driversData: Driver[];
@@ -20,15 +10,13 @@ interface DriverManagementProps {
 
 const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManagementProps) => {
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'đang lái':
+    switch (status) {
+      case 'dang_chay':
         return 'text-green-600 bg-green-100';
-      case 'sẵn sàng':
+      case 'san_sang':
         return 'text-blue-600 bg-blue-100';
-      case 'nghỉ phép':
+      case 'nghi':
         return 'text-yellow-600 bg-yellow-100';
-      case 'không hoạt động':
-        return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }
@@ -114,7 +102,7 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
             <div>
               <p className="text-sm text-gray-600">Đang lái</p>
               <p className="text-xl font-semibold text-gray-900">
-                {driversData.filter(d => d.status === 'Đang lái').length}
+                {driversData.filter(d => d.trang_thai === 'dang_chay').length}
               </p>
             </div>
           </div>
@@ -128,7 +116,7 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
             <div>
               <p className="text-sm text-gray-600">Sẵn sàng</p>
               <p className="text-xl font-semibold text-gray-900">
-                {driversData.filter(d => d.status === 'Sẵn sàng').length}
+                {driversData.filter(d => d.trang_thai === 'san_sang').length}
               </p>
             </div>
           </div>
@@ -142,7 +130,7 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
             <div>
               <p className="text-sm text-gray-600">Nghỉ phép</p>
               <p className="text-xl font-semibold text-gray-900">
-                {driversData.filter(d => d.status === 'Nghỉ phép').length}
+                {driversData.filter(d => d.trang_thai === 'nghi').length}
               </p>
             </div>
           </div>
@@ -168,24 +156,24 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
             </thead>
             <tbody>
               {driversData.map((driver, index) => (
-                <tr key={driver.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="p-4 text-gray-900">#{driver.id.toString().padStart(3, '0')}</td>
+                <tr key={driver.ma_tai_xe} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="p-4 text-gray-900">#{driver.ma_tai_xe.toString().padStart(3, '0')}</td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <User className="w-4 h-4 text-blue-600" />
                       </div>
-                      <span className="font-medium text-gray-900">{driver.name}</span>
+                      <span className="font-medium text-gray-900">{driver.ho_ten}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-gray-600">{driver.phone}</td>
-                  <td className="p-4 text-gray-600">{driver.license}</td>
-                  <td className="p-4 text-gray-600">{driver.experience} năm</td>
-                  <td className="p-4 text-gray-600">{driver.currentRoute || '-'}</td>
-                  <td className="p-4 text-gray-600">{driver.currentBus || '-'}</td>
+                  <td className="p-4 text-gray-600">{driver.so_dien_thoai}</td>
+                  <td className="p-4 text-gray-600">{driver.so_gplx}</td>
+                  <td className="p-4 text-gray-600">-</td>
+                  <td className="p-4 text-gray-600">-</td>
+                  <td className="p-4 text-gray-600">-</td>
                   <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(driver.status)}`}>
-                      {driver.status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(driver.trang_thai)}`}>
+                      {driver.trang_thai}
                     </span>
                   </td>
                   <td className="p-4">
@@ -198,7 +186,7 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onDelete(driver.id)}
+                        onClick={() => onDelete(driver.ma_tai_xe)}
                         className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
                         title="Xóa"
                       >

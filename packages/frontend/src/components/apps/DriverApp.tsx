@@ -1,7 +1,9 @@
+import { useRoutes } from '../../contexts/RoutesContext';
 // DriverApp component - Driver-specific interface
 import React from 'react';
 import DriverDashboard from '../dashboard/DriverDashboard';
-import { useAppData } from '../../contexts/AppDataContext';
+import { useDrivers } from '../../contexts/DriversContext';
+import { useBuses } from '../../contexts/BusesContext';
 import type { User } from '../../types';
 
 interface DriverAppProps {
@@ -9,28 +11,38 @@ interface DriverAppProps {
   onLogout: () => void;
 }
 
+
 export const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
-  const { busLocations, driversData } = useAppData();
-  
-  // Find driver data by matching user name with driver name
-  // If not found, use first driver as fallback for demo
-  const currentDriver = driversData.find(driver => 
-    driver.name.toLowerCase().includes(user.name.toLowerCase()) || 
-    user.name.toLowerCase().includes(driver.name.toLowerCase())
-  ) || driversData[0]; // Use first driver as fallback
-  
+  const { drivers } = useDrivers();
+  const { buses } = useBuses();
+  // const { routes } = useRoutes();
+
+  // Find driver data by matching user.ten with driver.ho_ten
+  const currentDriver = drivers.find((driver: any) =>
+    driver.ho_ten && user.ten && (
+      driver.ho_ten.toLowerCase().includes(user.ten.toLowerCase()) ||
+      user.ten.toLowerCase().includes(driver.ho_ten.toLowerCase())
+    )
+  ) || drivers[0];
+
   // Find corresponding bus for this driver
-  const currentBus = busLocations.find(bus => bus.driver === currentDriver?.name);
-  
-  // Create proper driverData object
+  const currentBus = buses.find((bus: any) => bus.ma_tai_xe === currentDriver?.ma_tai_xe);
+
+  // Get route name from bus (if available) - fallback to '-'
+  let routeName = '-';
+  // If bus has a related route (custom logic, e.g. via schedules or assignment), you can add here
+  // For now, just fallback
+
+  // Map backend fields to legacy driverData props for DriverDashboard compatibility
   const driverData = {
-    id: currentDriver?.id || 1,
-    name: currentDriver?.name || user.name,
-    busId: currentBus?.id || 1,
-    route: currentBus?.route || 'Tuyến A1',
-    license: currentDriver?.license,
-    phone: currentDriver?.phone,
-    experience: currentDriver?.experience
+    id: currentDriver?.ma_tai_xe || 1,
+    name: currentDriver?.ho_ten || user.ten,
+    busId: currentBus?.ma_xe || 1,
+    route: routeName,
+    license: currentDriver?.so_gplx,
+    phone: currentDriver?.so_dien_thoai,
+    experience: undefined,
+    avatar: undefined
   };
 
   return (
@@ -42,7 +54,7 @@ export const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
               <h1 className="text-xl font-semibold text-gray-900">Smart School Bus - Tài xế</h1>
               <p className="text-sm text-gray-600">Xin chào, {driverData.name}</p>
               <p className="text-xs text-gray-500">
-                Xe {currentBus?.busNumber || 'BS001'} - {driverData.route}
+                Xe {currentBus?.bien_so || 'BS001'} - {driverData.route}
               </p>
             </div>
             <button
@@ -54,7 +66,7 @@ export const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
           </div>
         </div>
       </div>
-      <DriverDashboard driverData={driverData} />
+  <DriverDashboard driverData={driverData} />
     </div>
   );
 };

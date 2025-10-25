@@ -6,30 +6,33 @@ import { BusCard } from './BusCard';
 import { FilterButtons } from './FilterButtons';
 import { SearchBox } from './SearchBox';
 import { BusDetailPanel } from './BusDetailPanel';
-import { useAppData } from '../../contexts/AppDataContext';
+import { useSchedules } from '../../contexts/SchedulesContext';
 
 const LocationTracking = () => {
   // Use custom hook for all bus tracking logic
+
+  // Lấy dữ liệu từ hook, fallback về mảng rỗng nếu undefined/null
   const {
-    busLocations,
-    filteredBuses,
-    filterStatus,
-    selectedBus,
-    autoRefresh,
-    searchQuery,
-    searchResults,
-    showSearchResults,
-    setFilterStatus,
-    setSelectedBus,
-    setAutoRefresh,
-    setSearchQuery,
-    setShowSearchResults,
-    handleSearchSelect,
-    clearSearch
+    buses = [],
+    loading,
+    error,
+    fetchBuses,
+    getMarkers,
   } = useBusTracking();
 
-  // Get schedule data from context to calculate total students correctly
-  const { scheduleData } = useAppData();
+  // State cho filter, search, selectedBus, autoRefresh nếu cần
+  const [selectedBus, setSelectedBus] = useState<number | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  // Nếu cần filterStatus, setFilterStatus thì tự tạo thêm state tương tự
+  // const [filterStatus, setFilterStatus] = useState<string>('');
+
+  // Get schedule data from SchedulesContext
+  const { schedulesData: scheduleDataRaw } = useSchedules();
+  // Fallback nếu scheduleDataRaw undefined/null
+  const scheduleData = Array.isArray(scheduleDataRaw) ? scheduleDataRaw : [];
 
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
@@ -57,7 +60,7 @@ const LocationTracking = () => {
   // Map View Component
   const MapView = () => {
     // Debug log to check for duplicates in render
-    console.log('MapView rendering with buses:', filteredBuses.map(b => ({ id: b.id, busNumber: b.busNumber })));
+  console.log('MapView rendering with buses:', filteredBuses.map((b) => ({ id: b.id, busNumber: b.busNumber })));
     
     return (
       <div className="relative bg-gradient-to-br from-blue-50 to-green-50 h-96 rounded-lg border-2 border-dashed border-gray-300">
@@ -70,37 +73,42 @@ const LocationTracking = () => {
       </div>
       
       {/* Simulate bus markers */}
-      {filteredBuses.map((bus, index) => {
-        const isSearched = searchResults.some(result => result.id === bus.id) && searchQuery.trim() !== '';
-        return (
-          <div
-            key={`map-marker-${bus.id}`}
-            className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transform transition-all hover:scale-110 ${
-              bus.status === 'Đang di chuyển' ? 'bg-green-500' :
-              bus.status === 'Dừng đón khách' ? 'bg-blue-500' :
-              bus.status === 'Sự cố' ? 'bg-red-500' : 'bg-gray-500'
-            } ${selectedBus === bus.id ? 'ring-4 ring-white ring-opacity-60 scale-125' : ''} 
-            ${isSearched ? 'ring-4 ring-yellow-400 animate-pulse' : ''}`}
-            style={{ left: `${20 + index * 15}%`, top: `${30 + index * 20}%` }}
-            onClick={() => handleBusSelect(bus.id)}
-            title={`${bus.busNumber} - ${bus.route}`}
-          >
-            <Bus className="w-3 h-3 text-white absolute top-0.5 left-0.5" />
-          </div>
-        );
-      })}
+      {Array.isArray(buses) && buses.length > 0 ? (
+        buses.map((bus, index) => {
+          // Nếu có logic search/filter thì bổ sung ở đây
+          return (
+            <div
+              key={`map-marker-${bus.id}`}
+              className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transform transition-all hover:scale-110 ${
+                bus.status === 'Đang di chuyển' ? 'bg-green-500' :
+                bus.status === 'Dừng đón khách' ? 'bg-blue-500' :
+                bus.status === 'Sự cố' ? 'bg-red-500' : 'bg-gray-500'
+              } ${selectedBus === bus.id ? 'ring-4 ring-white ring-opacity-60 scale-125' : ''}`}
+              style={{ left: `${20 + index * 15}%`, top: `${30 + index * 20}%` }}
+              onClick={() => setSelectedBus(selectedBus === bus.id ? null : bus.id)}
+              title={`${bus.busNumber || bus.name || bus.ten_xe || ''} - ${bus.route || ''}`}
+            >
+              <Bus className="w-3 h-3 text-white absolute top-0.5 left-0.5" />
+            </div>
+          );
+        })
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-gray-400">Không có dữ liệu xe buýt</div>
+      )}
     </div>
     );
   };
 
   // Calculate real-time stats
-  const totalBuses = busLocations.length;
-  const activeBuses = busLocations.filter(bus => bus.status === 'Đang di chuyển').length;
-  const pausedBuses = busLocations.filter(bus => bus.status === 'Dừng đón khách').length;
+  const totalBuses = Array.isArray(buses) ? buses.length : 0;
+  const activeBuses = Array.isArray(buses) ? buses.filter((bus: any) => bus.status === 'Đang di chuyển').length : 0;
+  const pausedBuses = Array.isArray(buses) ? buses.filter((bus: any) => bus.status === 'Dừng đón khách').length : 0;
   
   // Calculate total students from ALL schedules (not just bus locations) 
   // because one bus can have multiple schedules
-  const totalStudents = scheduleData.reduce((sum, schedule) => sum + schedule.students, 0);
+  const totalStudents = Array.isArray(scheduleData) && scheduleData.length > 0
+    ? scheduleData.reduce((sum: number, schedule: any) => sum + (schedule.students ?? 0), 0)
+    : 0;
   
 
 
@@ -213,7 +221,7 @@ const LocationTracking = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Tổng xe</p>
-              <p className="text-xl font-semibold text-gray-900">{busLocations.length}</p>
+              <p className="text-xl font-semibold text-gray-900">{buses.length}</p>
             </div>
           </div>
         </div>
@@ -226,7 +234,7 @@ const LocationTracking = () => {
             <div>
               <p className="text-sm text-gray-600">Đang di chuyển</p>
               <p className="text-xl font-semibold text-gray-900">
-                {busLocations.filter(b => b.status === 'Đang di chuyển').length}
+                {buses.filter((b: any) => b.status === 'Đang di chuyển').length}
               </p>
             </div>
           </div>
@@ -240,7 +248,7 @@ const LocationTracking = () => {
             <div>
               <p className="text-sm text-gray-600">Dừng đón khách</p>
               <p className="text-xl font-semibold text-gray-900">
-                {busLocations.filter(b => b.status === 'Dừng đón khách').length}
+                {buses.filter((b: any) => b.status === 'Dừng đón khách').length}
               </p>
             </div>
           </div>
@@ -254,7 +262,7 @@ const LocationTracking = () => {
             <div>
               <p className="text-sm text-gray-600">Học sinh</p>
               <p className="text-xl font-semibold text-gray-900">
-                {busLocations.reduce((sum, bus) => sum + bus.students, 0)}
+                {buses.reduce((sum: number, bus: any) => sum + (bus.students ?? 0), 0)}
               </p>
             </div>
           </div>
@@ -303,17 +311,17 @@ const LocationTracking = () => {
                 <MapView />
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {filteredBuses.map((bus) => (
-                    <BusCard
-                      key={`bus-card-${bus.id}`}
-                      bus={bus}
-                      isSelected={selectedBus === bus.id}
-                      onSelect={handleBusSelect}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))}
-                  
-                  {filteredBuses.length === 0 && (
+                  {filteredBuses.length > 0 ? (
+                    filteredBuses.map((bus: any) => (
+                      <BusCard
+                        key={`bus-card-${bus.id}`}
+                        bus={bus}
+                        isSelected={selectedBus === bus.id}
+                        onSelect={handleBusSelect}
+                        getStatusColor={getStatusColor}
+                      />
+                    ))
+                  ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Bus className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p>Không tìm thấy xe buýt phù hợp</p>
@@ -327,11 +335,12 @@ const LocationTracking = () => {
 
         {/* Bus Details Panel */}
         <div>
-          <BusDetailPanel
-            selectedBusId={selectedBus}
-            busLocations={busLocations}
-            getStatusColor={getStatusColor}
-          />
+            {/* Nếu BusDetailPanel cần prop busLocations, truyền buses */}
+            <BusDetailPanel
+              selectedBusId={selectedBus}
+              busLocations={buses}
+              getStatusColor={getStatusColor}
+            />
         </div>
       </div>
     </div>

@@ -1,34 +1,47 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { Schedule } from '../types';
-import scheduleService from '../services/api/scheduleService';
+import { scheduleService } from '../services/api/scheduleService';
 
 interface SchedulesContextType {
-  schedulesData: Schedule[];
-  setSchedulesData: React.Dispatch<React.SetStateAction<Schedule[]>>;
-  addSchedule: (schedule: Omit<Schedule, 'id'>) => Promise<void>;
-  updateSchedule: (scheduleId: number, schedule: Partial<Schedule>) => Promise<void>;
-  deleteSchedule: (scheduleId: number) => Promise<void>;
+  schedules: Schedule[];
+  fetchSchedules: () => Promise<void>;
+  addSchedule: (schedule: Omit<Schedule, 'ma_lich_trinh'>) => Promise<void>;
+  updateSchedule: (ma_lich_trinh: number, schedule: Partial<Schedule>) => Promise<void>;
+  deleteSchedule: (ma_lich_trinh: number) => Promise<void>;
 }
 
 const SchedulesContext = createContext<SchedulesContextType | undefined>(undefined);
 
 export const SchedulesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [schedulesData, setSchedulesData] = useState<Schedule[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
 
-  const addSchedule = useCallback(async (schedule: Omit<Schedule, 'id'>) => {
-    // ...implement API call and state update...
+  const fetchSchedules = useCallback(async () => {
+    const data = await scheduleService.getSchedules();
+    setSchedules(data);
   }, []);
 
-  const updateSchedule = useCallback(async (scheduleId: number, schedule: Partial<Schedule>) => {
-    // ...implement API call and state update...
-  }, []);
+  const addSchedule = useCallback(async (schedule: Omit<Schedule, 'ma_lich_trinh'>) => {
+    await scheduleService.createSchedule(schedule);
+    await fetchSchedules();
+  }, [fetchSchedules]);
 
-  const deleteSchedule = useCallback(async (scheduleId: number) => {
-    // ...implement API call and state update...
-  }, []);
+  const updateSchedule = useCallback(async (ma_lich_trinh: number, schedule: Partial<Schedule>) => {
+    await scheduleService.updateSchedule(ma_lich_trinh, schedule);
+    await fetchSchedules();
+  }, [fetchSchedules]);
+
+  const deleteSchedule = useCallback(async (ma_lich_trinh: number) => {
+    await scheduleService.deleteSchedule(ma_lich_trinh);
+    await fetchSchedules();
+  }, [fetchSchedules]);
+
+  useEffect(() => {
+    fetchSchedules();
+  }, [fetchSchedules]);
 
   return (
-    <SchedulesContext.Provider value={{ schedulesData, setSchedulesData, addSchedule, updateSchedule, deleteSchedule }}>
+    <SchedulesContext.Provider value={{ schedules, fetchSchedules, addSchedule, updateSchedule, deleteSchedule }}>
       {children}
     </SchedulesContext.Provider>
   );

@@ -1,3 +1,4 @@
+@import 'tailwindcss';
 /* Marker bus custom position (replaces inline style) */
 .marker-bus[data-left][data-top] {
   left: calc(var(--data-left, 0) * 1%);

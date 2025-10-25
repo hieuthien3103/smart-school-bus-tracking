@@ -13,7 +13,14 @@ import {
   Plus,
   UserPlus
 } from 'lucide-react';
-import { useAppData } from '../../contexts/AppDataContext';
+
+import { useBuses } from '../../contexts/BusesContext';
+import { useDrivers } from '../../contexts/DriversContext';
+import { useSchedules } from '../../contexts/SchedulesContext';
+import { useStudents } from '../../contexts/StudentsContext';
+import { useNotifications } from '../../contexts/NotificationsContext';
+
+
 
 interface AdminDashboardProps {
   adminData: {
@@ -26,19 +33,26 @@ interface AdminDashboardProps {
 
 const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps) => {
   // Get real data from context
-  const { busLocations, scheduleData, driversData, studentsData, error } = useAppData();
+  const { buses } = useBuses();
+  const { drivers } = useDrivers();
+  const { schedules } = useSchedules();
+  const { students } = useStudents();
+  const { notifications } = useNotifications();
+  const error = null;  
   
   // Calculate real-time stats from actual data with useMemo for proper re-rendering
-  const dashboardStats = useMemo(() => ({
-    totalBuses: busLocations.length,
-    activeBuses: busLocations.filter(bus => bus.status === 'Đang di chuyển').length,
-    // Calculate total students from actual studentsData for accurate count
-    totalStudents: studentsData.length,
-    totalDrivers: driversData.length,
-    totalRoutes: scheduleData.length, // Total number of routes/schedules
-    activeRoutes: scheduleData.filter(s => s.status === 'Hoạt động').length,
-    totalAlerts: busLocations.filter(bus => bus.status === 'Sự cố').length
-  }), [busLocations, scheduleData, driversData, studentsData]);
+ const dashboardStats = useMemo(() => ({
+  totalBuses: buses.length,
+  activeBuses: buses.filter(bus => bus.trang_thai === 'dang_su_dung').length,
+  maintenanceBuses: buses.filter(bus => bus.trang_thai === 'bao_duong').length,
+  readyBuses: buses.filter(bus => bus.trang_thai === 'san_sang').length,
+  totalStudents: students.length,
+  totalDrivers: drivers.length,
+  totalRoutes: schedules.length,
+  activeRoutes: schedules.filter(s => s.trang_thai_lich === 'dang_chay').length,
+  completedRoutes: schedules.filter(s => s.trang_thai_lich === 'hoan_thanh').length,
+  totalAlerts: notifications?.length ?? 0
+}), [buses, schedules, drivers, students, notifications]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -96,18 +110,23 @@ const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps
     };
   }, [onNavigate, onAddNew]);
 
-  const [recentActivities] = useState([
-    { id: 1, type: 'bus', message: 'Xe BS001 đã hoàn thành tuyến A1', time: '2 phút trước', status: 'success' },
-    { id: 2, type: 'alert', message: 'Cảnh báo: Xe BS003 chậm tiến độ 10 phút', time: '5 phút trước', status: 'warning' },
-    { id: 3, type: 'student', message: 'Học sinh Nguyễn Văn An đã được đón', time: '8 phút trước', status: 'info' },
-    { id: 4, type: 'driver', message: 'Tài xế Trần Văn B đã đăng nhập', time: '12 phút trước', status: 'info' }
-  ]);
+const recentActivities = notifications.map((n) => ({
+  id: n.ma_tb,
+  type: n.ma_tai_xe ? 'driver' : 'alert',
+  message: n.noi_dung,
+  time: new Date(n.thoi_gian).toLocaleString('vi-VN'),
+  status: 'info'
+}));
 
-  const [activeAlerts] = useState([
-    { id: 1, type: 'delay', message: 'Xe BS003 chậm 10 phút so với lịch trình', severity: 'medium', route: 'Tuyến B2' },
-    { id: 2, type: 'maintenance', message: 'Xe BS007 cần bảo trì định kỳ', severity: 'low', route: 'Tuyến C1' },
-    { id: 3, type: 'emergency', message: 'Sự cố nhỏ tại điểm đón số 5', severity: 'high', route: 'Tuyến A3' }
-  ]);
+const activeAlerts = notifications
+  .filter(n => n.noi_dung?.toLowerCase().includes('sự cố') || n.noi_dung?.toLowerCase().includes('chậm'))
+  .map((n) => ({
+    id: n.ma_tb,
+    type: 'alert',
+    message: n.noi_dung || '',
+    severity: n.noi_dung?.includes('sự cố') ? 'high' : 'medium',
+    route: n.ma_tai_xe ? `Tài xế ${n.ma_tai_xe}` : 'Không xác định'
+  }));
 
   // Real-time stats are now calculated directly from context data
 

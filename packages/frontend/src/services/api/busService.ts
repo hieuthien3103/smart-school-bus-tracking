@@ -1,97 +1,44 @@
+
 import { apiClient } from './client';
+import type { Bus, BusLocation, BusStatus } from '../../types';
 
-// Bus Types
-export interface Bus {
-  id: number;
-  license_plate: string;
-  capacity: number;
-  status: 'active' | 'inactive' | 'maintenance' | 'emergency';
-  driver_id?: number;
-  route_id?: number;
-  school_id?: number;
-  created_at: string;
-  updated_at: string;
-}
+export type CreateBusDto = Omit<Bus, 'ma_xe'>;
+export type UpdateBusDto = Partial<CreateBusDto>;
 
-export interface BusLocation {
-  id: number;
-  bus_id: number;
-  latitude: number;
-  longitude: number;
-  speed: number;
-  heading: number;
-  timestamp: string;
-}
-
-// Bus Service
 export const busService = {
   // Get all buses
   async getBuses(params?: {
     page?: number;
     limit?: number;
-    status?: string;
-    schoolId?: number;
-  }) {
-    return apiClient.get('/buses', { params });
+    trang_thai?: BusStatus;
+    ma_tai_xe?: number;
+  }): Promise<Bus[]> {
+    return apiClient.get<Bus[]>('/xebuyt', { params });
   },
 
   // Get bus by ID
-  async getBusById(id: number) {
-    return apiClient.get(`/buses/${id}`);
+  async getBusById(ma_xe: number): Promise<Bus> {
+    return apiClient.get<Bus>(`/xebuyt/${ma_xe}`);
   },
 
   // Create new bus
-  async createBus(data: Omit<Bus, 'id' | 'created_at' | 'updated_at'>) {
-    return apiClient.post('/buses', data);
+  async createBus(data: CreateBusDto): Promise<Bus> {
+    return apiClient.post<Bus>('/xebuyt', data);
   },
 
   // Update bus
-  async updateBus(id: number, data: Partial<Bus>) {
-    return apiClient.put(`/buses/${id}`, data);
+  async updateBus(ma_xe: number, data: UpdateBusDto): Promise<Bus> {
+    return apiClient.put<Bus>(`/xebuyt/${ma_xe}`, data);
   },
 
   // Delete bus
-  async deleteBus(id: number) {
-    return apiClient.delete(`/buses/${id}`);
+  async deleteBus(ma_xe: number): Promise<void> {
+    return apiClient.delete<void>(`/xebuyt/${ma_xe}`);
   },
 
   // Get bus location
-  async getBusLocation(busId: number) {
-    return apiClient.get(`/tracking/bus/${busId}`);
-  },
-
-  // Update bus location (for real-time tracking)
-  async updateBusLocation(data: {
-    busId: number;
-    latitude: number;
-    longitude: number;
-    speed?: number;
-    heading?: number;
-    driverId?: number;
-  }) {
-    return apiClient.post('/tracking/location', data);
-  },
-
-  // Update bus status
-  async updateBusStatus(data: {
-    busId: number;
-    status: string;
-    message?: string;
-    driverId?: number;
-  }) {
-    return apiClient.post('/tracking/status', data);
-  },
-
-  // Send emergency alert
-  async sendEmergencyAlert(data: {
-    busId: number;
-    message: string;
-    severity?: 'low' | 'medium' | 'high' | 'critical';
-    latitude?: number;
-    longitude?: number;
-    driverId?: number;
-  }) {
-    return apiClient.post('/tracking/emergency', data);
+  async getBusLocation(ma_xe: number): Promise<BusLocation[]> {
+    return apiClient.get<BusLocation[]>(`/vitrixe?ma_xe=${ma_xe}`);
   }
 };
 

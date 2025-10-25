@@ -1,31 +1,25 @@
 import { Plus, Edit, Trash2 } from 'lucide-react';
-
-interface Schedule {
-  id: number;
-  route: string;
-  time: string;
-  driver: string;
-  bus: string;
-  students: number;
-  status: string;
-}
+import type { Schedule } from '../../types';
 
 interface ScheduleManagementProps {
-  scheduleData: Schedule[];
+  schedules: Schedule[];
   onAdd: () => void;
   onEdit: (schedule: Schedule) => void;
-  onDelete: (id: number) => void;
+  onDelete: (ma_lich: number) => void;
 }
 
-const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleManagementProps) => {
+const ScheduleManagement = ({ schedules, onAdd, onEdit, onDelete }: ScheduleManagementProps) => {
   // Calculate stats
-  const activeSchedules = scheduleData.filter(s => s.status === 'Hoạt động').length;
-  const pausedSchedules = scheduleData.filter(s => s.status === 'Tạm dừng').length; 
+  const activeSchedules = schedules.filter(s => s.trang_thai_lich === 'dang_chay').length;
+  const waitingSchedules = schedules.filter(s => s.trang_thai_lich === 'cho_chay').length;
+  const completedSchedules = schedules.filter(s => s.trang_thai_lich === 'hoan_thanh').length;
+  const canceledSchedules = schedules.filter(s => s.trang_thai_lich === 'huy').length;
 
-  const totalStudents = scheduleData.reduce((sum, s) => sum + (Number(s.students) || 0), 0);
+  // Tổng số học sinh: tính tổng số phân công (nếu có)
+  const totalStudents = schedules.reduce((sum, s) => sum + (s.phan_cong ? s.phan_cong.length : 0), 0);
 
   // Show empty state when no data
-  if (scheduleData.length === 0) {
+  if (schedules.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -41,7 +35,6 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
             Thêm lịch trình
           </button>
         </div>
-
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
           <div className="max-w-md mx-auto">
             <div className="mb-4">
@@ -88,18 +81,17 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Tổng lịch trình</p>
-              <p className="text-2xl font-bold text-gray-900">{scheduleData.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{schedules.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <span className="text-blue-600 text-xl">📅</span>
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Đang hoạt động</p>
+              <p className="text-sm text-gray-600">Đang chạy</p>
               <p className="text-2xl font-bold text-green-600">{activeSchedules}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -107,19 +99,17 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Tạm dừng</p>
-              <p className="text-2xl font-bold text-yellow-600">{pausedSchedules}</p>
+              <p className="text-sm text-gray-600">Chờ chạy</p>
+              <p className="text-2xl font-bold text-yellow-600">{waitingSchedules}</p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <span className="text-yellow-600 text-xl">⏸️</span>
+              <span className="text-yellow-600 text-xl">⏳</span>
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -138,8 +128,10 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tuyến</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giờ khởi hành</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày chạy</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giờ bắt đầu</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tài xế</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Xe</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Học sinh</th>
@@ -148,24 +140,28 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {scheduleData.map((schedule) => (
-                <tr key={schedule.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.route}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.time}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.driver}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.bus}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.students}</td>
+              {schedules.map((schedule) => (
+                <tr key={schedule.ma_lich}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.ma_lich}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.tuyen?.ten_tuyen || schedule.ma_tuyen || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.ngay_chay}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.gio_bat_dau}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.tai_xe?.ho_ten || schedule.ma_tai_xe || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.xe?.bien_so || schedule.ma_xe || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.phan_cong ? schedule.phan_cong.length : 0}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      schedule.status === 'Hoạt động' ? 'bg-green-100 text-green-800' :
-                      schedule.status === 'Tạm dừng' ? 'bg-yellow-100 text-yellow-800' :
-                      schedule.status === 'Bảo trì' ? 'bg-red-100 text-red-800' :
+                      schedule.trang_thai_lich === 'dang_chay' ? 'bg-green-100 text-green-800' :
+                      schedule.trang_thai_lich === 'cho_chay' ? 'bg-yellow-100 text-yellow-800' :
+                      schedule.trang_thai_lich === 'hoan_thanh' ? 'bg-blue-100 text-blue-800' :
+                      schedule.trang_thai_lich === 'huy' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {schedule.status === 'Hoạt động' ? '✅ ' : 
-                       schedule.status === 'Tạm dừng' ? '⏸️ ' :
-                       schedule.status === 'Bảo trì' ? '🔧 ' : ''}
-                      {schedule.status}
+                      {schedule.trang_thai_lich === 'dang_chay' ? 'Đang chạy' :
+                        schedule.trang_thai_lich === 'cho_chay' ? 'Chờ chạy' :
+                        schedule.trang_thai_lich === 'hoan_thanh' ? 'Hoàn thành' :
+                        schedule.trang_thai_lich === 'huy' ? 'Hủy' :
+                        schedule.trang_thai_lich}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -178,7 +174,7 @@ const ScheduleManagement = ({ scheduleData, onAdd, onEdit, onDelete }: ScheduleM
                         <Edit className="h-4 w-4" />
                       </button>
                       <button 
-                        onClick={() => onDelete(schedule.id)}
+                        onClick={() => onDelete(schedule.ma_lich)}
                         className="text-red-600 hover:text-red-900" 
                         title="Xóa lịch trình"
                       >

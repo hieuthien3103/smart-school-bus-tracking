@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { User } from '../types';
-import { apiClient } from '../services/api/client';
-import { ENDPOINTS } from '../services/api/config';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+import type { User } from "../types";
+import { apiClient } from "../services/api/client";
+import { ENDPOINTS } from "../services/api/config";
 
 // Auth types
 interface LoginCredentials {
@@ -22,13 +28,13 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
-  
+
   // Auth actions
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
-  
+
   // Permissions
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
@@ -49,19 +55,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem('auth_token');
-        const storedUser = localStorage.getItem('auth_user');
-        
+        const storedToken = localStorage.getItem("auth_token");
+        const storedUser = localStorage.getItem("auth_user");
+
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
           apiClient.setToken(storedToken);
-          
+
           // Verify token is still valid
           await verifyToken();
         }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        console.error("Failed to initialize auth:", error);
         clearAuth();
       } finally {
         setLoading(false);
@@ -74,10 +80,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Verify token validity
   const verifyToken = async () => {
     try {
-      const userProfile = await apiClient.get<User>(ENDPOINTS.AUTH.PROFILE);
-      setUser(userProfile);
+      const response = await apiClient.get<User>(ENDPOINTS.AUTH.PROFILE);
+      if (response.success && response.data) {
+        setUser(response.data);
+      } else {
+        throw new Error(response.message || "Token verification failed");
+      }
     } catch (error) {
-      console.error('Token verification failed:', error);
+      console.error("Token verification failed:", error);
       clearAuth();
     }
   };
@@ -87,39 +97,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     apiClient.clearToken();
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    localStorage.removeItem("refresh_token");
   }, []);
 
   // Login function
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       setLoading(true);
-      
+
       const response = await apiClient.post<AuthResponse>(
         ENDPOINTS.AUTH.LOGIN,
         credentials
       );
-      
-      const { user: authUser, token: authToken, refreshToken } = response;
-      
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || "Login failed");
+      }
+
+      const { user: authUser, token: authToken, refreshToken } = response.data;
+
       // Update state
       setUser(authUser);
       setToken(authToken);
-      
+
       // Update API client
       apiClient.setToken(authToken);
-      
+
       // Store in localStorage
-      localStorage.setItem('auth_token', authToken);
-      localStorage.setItem('auth_user', JSON.stringify(authUser));
-      localStorage.setItem('refresh_token', refreshToken);
-      
-      console.log('Login successful:', authUser.name);
+      localStorage.setItem("auth_token", authToken);
+      localStorage.setItem("auth_user", JSON.stringify(authUser));
+      localStorage.setItem("refresh_token", refreshToken);
+
+      console.log("Login successful:", authUser.username);
     } catch (error: any) {
-      console.error('Login failed:', error);
-      throw new Error(error.message || 'Login failed');
+      console.error("Login failed:", error);
+      throw new Error(error.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -128,44 +142,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      // Call logout endpoint
       await apiClient.post(ENDPOINTS.AUTH.LOGOUT);
     } catch (error) {
-      console.error('Logout API call failed:', error);
+      console.error("Logout API call failed:", error);
     } finally {
       clearAuth();
-      // Redirect to login page
-      window.location.href = '/login';
+      window.location.href = "/login";
     }
   }, [clearAuth]);
 
   // Refresh token function
-  const refreshToken = useCallback(async () => {
+  const refreshAuthToken = useCallback(async () => {
     try {
-      const storedRefreshToken = localStorage.getItem('refresh_token');
-      
+      const storedRefreshToken = localStorage.getItem("refresh_token");
       if (!storedRefreshToken) {
-        throw new Error('No refresh token available');
+        throw new Error("No refresh token available");
       }
-      
       const response = await apiClient.post<AuthResponse>(
         ENDPOINTS.AUTH.REFRESH,
         { refreshToken: storedRefreshToken }
       );
-      
-      const { user: authUser, token: newToken, refreshToken: newRefreshToken } = response;
-      
-      // Update state and storage
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || "Token refresh failed");
+      }
+
+      const {
+        user: authUser,
+        token: newToken,
+        refreshToken: newRefreshToken,
+      } = response.data;
+
       setUser(authUser);
       setToken(newToken);
       apiClient.setToken(newToken);
-      
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(authUser));
-      localStorage.setItem('refresh_token', newRefreshToken);
-      
+      localStorage.setItem("auth_token", newToken);
+      localStorage.setItem("auth_user", JSON.stringify(authUser));
+      localStorage.setItem("refresh_token", newRefreshToken);
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error("Token refresh failed:", error);
       clearAuth();
       throw error;
     }
@@ -174,45 +189,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Update user profile
   const updateProfile = useCallback(async (updates: Partial<User>) => {
     try {
-      const updatedUser = await apiClient.put<User>(
+      const response = await apiClient.put<User>(
         ENDPOINTS.AUTH.PROFILE,
         updates
       );
-      
-      setUser(updatedUser);
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+
+      if (response.success && response.data) {
+        setUser(response.data);
+        localStorage.setItem("auth_user", JSON.stringify(response.data));
+      } else {
+        throw new Error(response.message || "Profile update failed");
+      }
     } catch (error) {
-      console.error('Profile update failed:', error);
+      console.error("Profile update failed:", error);
       throw error;
     }
   }, []);
 
   // Permission checks
-  const hasPermission = useCallback((permission: string): boolean => {
-    if (!user || !user.permissions) return false;
-    return user.permissions.includes(permission);
-  }, [user]);
+  // Remove hasPermission (User type does not have permissions)
+  const hasPermission = useCallback(
+    (_permission: string): boolean => false,
+    []
+  );
 
-  const hasRole = useCallback((role: string): boolean => {
-    if (!user) return false;
-    return user.role === role;
-  }, [user]);
+  const hasRole = useCallback(
+    (role: string): boolean => {
+      if (!user) return false;
+      return user.role === role;
+    },
+    [user]
+  );
 
   // Auto token refresh
   useEffect(() => {
     if (!token) return;
-
     const interval = setInterval(async () => {
       try {
-        await refreshToken();
+        await refreshAuthToken();
       } catch (error) {
-        console.error('Auto token refresh failed:', error);
+        console.error("Auto token refresh failed:", error);
         logout();
       }
     }, 15 * 60 * 1000); // Refresh every 15 minutes
-
     return () => clearInterval(interval);
-  }, [token, refreshToken, logout]);
+  }, [token, refreshAuthToken, logout]);
 
   const value: AuthContextType = {
     user,
@@ -221,7 +242,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     login,
     logout,
-    refreshToken,
+    refreshToken: refreshAuthToken,
     updateProfile,
     hasPermission,
     hasRole,
@@ -234,7 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

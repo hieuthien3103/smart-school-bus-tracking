@@ -1,58 +1,25 @@
+
 import type { Student } from '../../types';
 import { apiClient, type PaginatedResponse } from './client';
 import { ENDPOINTS } from './config';
 
-// Student DTOs
-export interface CreateStudentDto {
-  student_code: string;
-  name: string;
-  grade: string;
-  class: string;
-  date_of_birth: string;
-  gender: 'male' | 'female';
-  address: string;
-  pickup_address: string;
-  dropoff_address: string;
-  school_id: number;
-  route_id?: number;
-  stop_id?: number;
-  status?: 'active' | 'inactive' | 'transferred' | 'graduated';
-  medical_notes?: string;
-  allergies?: string;
-  emergency_instructions?: string;
-  photo?: string;
-}
-
-export interface UpdateStudentDto {
-  student_code?: string;
-  name?: string;
-  grade?: string;
-  class?: string;
-  date_of_birth?: string;
-  gender?: 'male' | 'female';
-  address?: string;
-  pickup_address?: string;
-  dropoff_address?: string;
-  school_id?: number;
-  route_id?: number;
-  stop_id?: number;
-  status?: 'active' | 'inactive' | 'transferred' | 'graduated';
-  medical_notes?: string;
-  allergies?: string;
-  emergency_instructions?: string;
-  photo?: string;
-}
-
+// Filters for hocsinh
 export interface StudentFilters {
-  schoolId?: number;
-  routeId?: number;
-  busId?: number;
-  grade?: string;
-  status?: string;
+  ma_phu_huynh?: number;
+  ma_diem_don?: number;
+  ma_diem_tra?: number;
+  lop?: string;
+  trang_thai?: 'hoat_dong' | 'nghi';
   search?: string;
   page?: number;
   limit?: number;
 }
+
+// DTOs for create/update
+export type CreateStudentDto = Omit<Student, 'ma_hs'>;
+export type UpdateStudentDto = Partial<CreateStudentDto>;
+
+// Removed duplicate StudentService class and its exports to resolve duplicate identifier error.
 
 class StudentService {
   // Get all students with optional filters

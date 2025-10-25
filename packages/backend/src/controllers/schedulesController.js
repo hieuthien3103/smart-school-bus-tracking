@@ -105,10 +105,9 @@ exports.getStatistics = async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     
-    // TODO: Implement statistics logic
-    const mockData = [];
-    
-    return successResponse(res, mockData, 'Lấy thống kê thành công');
+  // TODO: Implement statistics logic from database
+  const statistics = await getScheduleStatisticsFromDB(start_date, end_date); // Implement this function
+  return successResponse(res, statistics, 'Lấy thống kê thành công');
   } catch (error) {
     return errorResponse(res, error.message, 500);
   }

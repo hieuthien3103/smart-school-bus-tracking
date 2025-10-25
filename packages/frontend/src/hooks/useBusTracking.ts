@@ -1,116 +1,133 @@
-// Bus tracking hook for Smart School Bus System
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { BusLocation } from '../types';
-import { useAppData } from '../contexts/AppDataContext';
-import { AUTO_REFRESH_INTERVAL } from '../constants';
 
-export const useBusTracking = () => {
-  // Get bus locations from global context
-  const { busLocations, setBusLocations } = useAppData();
-  
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
+
+export const useBusTracking = (options?: { pollIntervalMs?: number }) => {
+  const [buses, setBuses] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // UI state đồng bộ với LocationTracking
   const [selectedBus, setSelectedBus] = useState<number | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
-  // Update bus locations with random movement (preserving status and students for consistency)
-  const updateBusLocations = useCallback(() => {
-    setBusLocations(prev => prev.map(bus => ({
-      ...bus,
-      lat: bus.lat + (Math.random() - 0.5) * 0.001,
-      lng: bus.lng + (Math.random() - 0.5) * 0.001,
-      speed: Math.max(0, bus.speed + (Math.random() - 0.5) * 10),
-      lastUpdate: new Date().toLocaleTimeString('vi-VN'),
-      // Preserve status and students for consistency - don't randomize
-    })));
-  }, [setBusLocations]);
+  const normalizeArray = (maybeArray: any): any[] => {
+    if (!maybeArray) return [];
+    if (Array.isArray(maybeArray)) return maybeArray;
+    if (Array.isArray(maybeArray.data)) return maybeArray.data;
+    return [];
+  };
 
-  // Preserve selectedBus when data updates - reset only if bus no longer exists
-  useEffect(() => {
-    if (selectedBus !== null) {
-      const stillExists = busLocations.some(bus => bus.id === selectedBus);
-      if (!stillExists) {
-        setSelectedBus(null);
-      }
+  const fetchBuses = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('/api/buses');
+      const raw = res?.data ?? res;
+      const list = normalizeArray(raw);
+      setBuses(list);
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+      setBuses([]);
+    } finally {
+      setLoading(false);
     }
-  }, [busLocations, selectedBus]);
+  }, []);
 
-  // Auto-refresh effect
   useEffect(() => {
-    if (!autoRefresh) return;
-    
-    const interval = setInterval(updateBusLocations, AUTO_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [autoRefresh, updateBusLocations]);
+    fetchBuses();
+    if (options?.pollIntervalMs && options.pollIntervalMs > 0) {
+      const id = setInterval(fetchBuses, options.pollIntervalMs);
+      return () => clearInterval(id);
+    }
+  }, [fetchBuses, options?.pollIntervalMs]);
 
-  // Search functionality
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    
-    return busLocations.filter(bus =>
-      bus.busNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bus.route.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bus.driver.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [busLocations, searchQuery]);
-
-  // Filtered buses (stable filtering) - ensure unique IDs
+  // Filtered buses theo trạng thái
   const filteredBuses = useMemo(() => {
-    let buses = filterStatus === 'all' ? busLocations : busLocations.filter(bus => 
-      bus.status.toLowerCase().includes(filterStatus.toLowerCase())
-    );
-    
-    // Debug log to check for duplicates
-    console.log('Original buses count:', buses.length);
-    const uniqueBuses = buses.filter((bus, index, self) => 
-      index === self.findIndex(b => b.id === bus.id)
-    );
-    console.log('Unique buses count:', uniqueBuses.length);
-    
-    if (buses.length !== uniqueBuses.length) {
-      console.warn('Found duplicate bus IDs in data!');
+    let result = [...buses];
+    if (filterStatus) {
+      result = result.filter((bus) => bus.status === filterStatus);
     }
-    
-    return uniqueBuses;
-  }, [busLocations, filterStatus]);
+    if (searchQuery.trim()) {
+      result = result.filter((bus) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (bus.busNumber && bus.busNumber.toLowerCase().includes(q)) ||
+          (bus.route && bus.route.toLowerCase().includes(q)) ||
+          (bus.driver && bus.driver.toLowerCase().includes(q))
+        );
+      });
+    }
+    return result;
+  }, [buses, filterStatus, searchQuery]);
 
-  // Search handlers
-  const handleSearchSelect = useCallback((bus: BusLocation) => {
+  // Search results (dropdown)
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setSearchResults(
+        buses.filter((bus) => {
+          const q = searchQuery.toLowerCase();
+          return (
+            (bus.busNumber && bus.busNumber.toLowerCase().includes(q)) ||
+            (bus.route && bus.route.toLowerCase().includes(q)) ||
+            (bus.driver && bus.driver.toLowerCase().includes(q))
+          );
+        })
+      );
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, buses]);
+
+  const getMarkers = useCallback(() => {
+    return (filteredBuses ?? []).map((bus: any) => {
+      return {
+        id: bus.id ?? bus.ma_xe ?? bus.ma_xe_id,
+        lat: bus.lat ?? bus.latitude ?? bus.toa_do_lat,
+        lng: bus.lng ?? bus.longitude ?? bus.toa_do_lng,
+        label: bus.name ?? bus.ten_xe ?? '',
+        raw: bus,
+      };
+    });
+  }, [filteredBuses]);
+
+  // Xử lý chọn xe từ search
+  const handleSearchSelect = (bus: any) => {
     setSelectedBus(bus.id);
+    setShowSearchResults(false);
+    setSearchQuery(bus.busNumber || '');
+  };
+
+  const clearSearch = () => {
     setSearchQuery('');
     setShowSearchResults(false);
-  }, []);
-
-  const clearSearch = useCallback(() => {
-    setSearchQuery('');
-    setShowSearchResults(false);
-  }, []);
-
-  // Filter handler
-  const handleFilterChange = useCallback((status: string) => {
-    setFilterStatus(status);
-  }, []);
+    setSearchResults([]);
+  };
 
   return {
-    // States
-    busLocations,
+    buses,
     filteredBuses,
-    filterStatus,
+    loading,
+    error,
+    fetchBuses,
+    getMarkers,
     selectedBus,
-    autoRefresh,
-    searchQuery,
-    searchResults,
-    showSearchResults,
-
-    // Actions
-    setFilterStatus: handleFilterChange,
     setSelectedBus,
-    setAutoRefresh,
+    filterStatus,
+    setFilterStatus,
+    searchQuery,
     setSearchQuery,
+    searchResults,
+    setSearchResults,
+    showSearchResults,
     setShowSearchResults,
-    updateBusLocations,
+    autoRefresh,
+    setAutoRefresh,
     handleSearchSelect,
-    clearSearch
+    clearSearch,
   };
 };

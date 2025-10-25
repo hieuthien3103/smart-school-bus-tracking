@@ -112,13 +112,53 @@ class Schedule {
 
   // Cập nhật lịch trình
   static async update(ma_lich, data) {
-    const { ma_tuyen, ma_xe, ma_tai_xe, ngay_chay, gio_bat_dau, gio_ket_thuc, trang_thai } = data;
+    // Build dynamic SQL to handle partial updates safely
+    const updates = [];
+    const values = [];
+    
+    // Only update fields that are provided
+    if (data.ma_tuyen !== undefined) {
+      updates.push('ma_tuyen=?');
+      values.push(data.ma_tuyen);
+    }
+    if (data.ma_xe !== undefined) {
+      updates.push('ma_xe=?');
+      values.push(data.ma_xe);
+    }
+    if (data.ma_tai_xe !== undefined) {
+      updates.push('ma_tai_xe=?');
+      values.push(data.ma_tai_xe);
+    }
+    if (data.ngay_chay !== undefined) {
+      updates.push('ngay_chay=?');
+      values.push(data.ngay_chay);
+    }
+    if (data.gio_bat_dau !== undefined) {
+      updates.push('gio_bat_dau=?');
+      values.push(data.gio_bat_dau);
+    }
+    if (data.gio_ket_thuc !== undefined) {
+      updates.push('gio_ket_thuc=?');
+      values.push(data.gio_ket_thuc);
+    }
+    if (data.trang_thai !== undefined) {
+      updates.push('trang_thai_lich=?');
+      values.push(data.trang_thai);
+    }
+
+    // Require at least one field to update
+    if (updates.length === 0) {
+      throw new Error('No fields provided for update');
+    }
+
+    // Add ma_lich to the end of values array for WHERE clause
+    values.push(ma_lich);
 
     await dbQuery(
       `UPDATE lichtrinh 
-       SET ma_tuyen=?, ma_xe=?, ma_tai_xe=?, ngay_chay=?, gio_bat_dau=?, gio_ket_thuc=?, trang_thai_lich=?
+       SET ${updates.join(', ')}
        WHERE ma_lich=?`,
-      [ma_tuyen, ma_xe, ma_tai_xe, ngay_chay, gio_bat_dau, gio_ket_thuc, trang_thai, ma_lich]
+      values
     );
 
     return { ma_lich, ...data };

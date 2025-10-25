@@ -1,34 +1,47 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { Route } from '../types';
-import routeService from '../services/api/routeService';
+import { routeService } from '../services/api/routeService';
 
 interface RoutesContextType {
-  routesData: Route[];
-  setRoutesData: React.Dispatch<React.SetStateAction<Route[]>>;
-  addRoute: (route: Omit<Route, 'id'>) => Promise<void>;
-  updateRoute: (routeId: number, route: Partial<Route>) => Promise<void>;
-  deleteRoute: (routeId: number) => Promise<void>;
+  routes: Route[];
+  fetchRoutes: () => Promise<void>;
+  addRoute: (route: Omit<Route, 'ma_tuyen'>) => Promise<void>;
+  updateRoute: (ma_tuyen: number, route: Partial<Route>) => Promise<void>;
+  deleteRoute: (ma_tuyen: number) => Promise<void>;
 }
 
 const RoutesContext = createContext<RoutesContextType | undefined>(undefined);
 
 export const RoutesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [routesData, setRoutesData] = useState<Route[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
 
-  const addRoute = useCallback(async (route: Omit<Route, 'id'>) => {
-    // ...implement API call and state update...
+  const fetchRoutes = useCallback(async () => {
+    const data = await routeService.getRoutes();
+    setRoutes(data);
   }, []);
 
-  const updateRoute = useCallback(async (routeId: number, route: Partial<Route>) => {
-    // ...implement API call and state update...
-  }, []);
+  const addRoute = useCallback(async (route: Omit<Route, 'ma_tuyen'>) => {
+    await routeService.createRoute(route);
+    await fetchRoutes();
+  }, [fetchRoutes]);
 
-  const deleteRoute = useCallback(async (routeId: number) => {
-    // ...implement API call and state update...
-  }, []);
+  const updateRoute = useCallback(async (ma_tuyen: number, route: Partial<Route>) => {
+    await routeService.updateRoute(ma_tuyen, route);
+    await fetchRoutes();
+  }, [fetchRoutes]);
+
+  const deleteRoute = useCallback(async (ma_tuyen: number) => {
+    await routeService.deleteRoute(ma_tuyen);
+    await fetchRoutes();
+  }, [fetchRoutes]);
+
+  useEffect(() => {
+    fetchRoutes();
+  }, [fetchRoutes]);
 
   return (
-    <RoutesContext.Provider value={{ routesData, setRoutesData, addRoute, updateRoute, deleteRoute }}>
+    <RoutesContext.Provider value={{ routes, fetchRoutes, addRoute, updateRoute, deleteRoute }}>
       {children}
     </RoutesContext.Provider>
   );

@@ -99,17 +99,17 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
         setIsConnected(true);
       });
 
-      newSocket.on('disconnect', (reason) => {
+      newSocket.on('disconnect', (reason: string) => {
         console.log('❌ Disconnected from Socket.IO server:', reason);
         setIsConnected(false);
       });
 
-      newSocket.on('connect_error', (error) => {
+      newSocket.on('connect_error', (error: Error) => {
         console.error('🚨 Socket connection error:', error);
         setIsConnected(false);
       });
 
-      newSocket.on('roomJoined', (data) => {
+      newSocket.on('roomJoined', (data: any) => {
         console.log('🏠 Joined rooms successfully:', data);
       });
 

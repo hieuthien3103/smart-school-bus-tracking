@@ -146,12 +146,12 @@ const Reports = () => {
                     <div>{(route.cost / 1000000).toFixed(1)}M đ</div>
                   </div>
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${
-                        route.efficiency >= 90 ? 'bg-green-500' : 
-                        route.efficiency >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                    <div
+                      className={`h-2 rounded-full route-efficiency-bar ${
+                        route.efficiency >= 90 ? 'efficiency-green' :
+                        route.efficiency >= 80 ? 'efficiency-yellow' : 'efficiency-red'
                       }`}
-                      style={{ width: `${route.efficiency}%` }}
+                      data-width={route.efficiency}
                     ></div>
                   </div>
                 </div>
@@ -238,7 +238,7 @@ const Reports = () => {
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: item.color }}></div>
+                      <div className={`w-3 h-3 rounded-full mr-3 maintenance-color-${item.color.replace('#', '')}`}></div>
                       <div className="text-sm font-medium text-gray-900">{item.type}</div>
                     </div>
                   </td>
@@ -288,8 +288,7 @@ const Reports = () => {
                           className={`h-2 rounded-full ${
                             driver.onTime >= 95 ? 'bg-green-500' : 
                             driver.onTime >= 90 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${driver.onTime}%` }}
+                          } width-bar-${driver.onTime}`}
                         ></div>
                       </div>
                       <span className="text-sm text-gray-900">{driver.onTime}%</span>

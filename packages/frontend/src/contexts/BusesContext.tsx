@@ -1,34 +1,47 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { Bus } from '../types';
 import busService from '../services/api/busService';
 
 interface BusesContextType {
-  busesData: Bus[];
-  setBusesData: React.Dispatch<React.SetStateAction<Bus[]>>;
-  addBus: (bus: Omit<Bus, 'id'>) => Promise<void>;
-  updateBus: (busId: number, bus: Partial<Bus>) => Promise<void>;
-  deleteBus: (busId: number) => Promise<void>;
+  buses: Bus[];
+  fetchBuses: () => Promise<void>;
+  addBus: (bus: Omit<Bus, 'ma_xe'>) => Promise<void>;
+  updateBus: (ma_xe: number, bus: Partial<Bus>) => Promise<void>;
+  deleteBus: (ma_xe: number) => Promise<void>;
 }
 
 const BusesContext = createContext<BusesContextType | undefined>(undefined);
 
 export const BusesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [busesData, setBusesData] = useState<Bus[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
 
-  const addBus = useCallback(async (bus: Omit<Bus, 'id'>) => {
-    // ...implement API call and state update...
+  const fetchBuses = useCallback(async () => {
+    const data = await busService.getBuses();
+    setBuses(data);
   }, []);
 
-  const updateBus = useCallback(async (busId: number, bus: Partial<Bus>) => {
-    // ...implement API call and state update...
-  }, []);
+  const addBus = useCallback(async (bus: Omit<Bus, 'ma_xe'>) => {
+    await busService.createBus(bus);
+    await fetchBuses();
+  }, [fetchBuses]);
 
-  const deleteBus = useCallback(async (busId: number) => {
-    // ...implement API call and state update...
-  }, []);
+  const updateBus = useCallback(async (ma_xe: number, bus: Partial<Bus>) => {
+    await busService.updateBus(ma_xe, bus);
+    await fetchBuses();
+  }, [fetchBuses]);
+
+  const deleteBus = useCallback(async (ma_xe: number) => {
+    await busService.deleteBus(ma_xe);
+    await fetchBuses();
+  }, [fetchBuses]);
+
+  useEffect(() => {
+    fetchBuses();
+  }, [fetchBuses]);
 
   return (
-    <BusesContext.Provider value={{ busesData, setBusesData, addBus, updateBus, deleteBus }}>
+    <BusesContext.Provider value={{ buses, fetchBuses, addBus, updateBus, deleteBus }}>
       {children}
     </BusesContext.Provider>
   );
