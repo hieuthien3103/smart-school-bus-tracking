@@ -1,11 +1,15 @@
+import { apiClient } from "./client";
+import type {
+  Bus,
+  BusLocation,
+  BusStatus,
+  BusTrackingData,
+} from "../../types";
 
-import { apiClient } from './client';
-import type { Bus, BusLocation, BusStatus } from '../../types';
-
-export type CreateBusDto = Omit<Bus, 'ma_xe'>;
+export type CreateBusDto = Omit<Bus, "ma_xe">;
 export type UpdateBusDto = Partial<CreateBusDto>;
 
-export const busService = {
+const busService = {
   // Get all buses
   async getBuses(params?: {
     page?: number;
@@ -13,33 +17,45 @@ export const busService = {
     trang_thai?: BusStatus;
     ma_tai_xe?: number;
   }): Promise<Bus[]> {
-    return apiClient.get<Bus[]>('/xebuyt', { params });
+    const res = await apiClient.get("/xebuyt", { params });
+    return res.data;
   },
 
   // Get bus by ID
   async getBusById(ma_xe: number): Promise<Bus> {
-    return apiClient.get<Bus>(`/xebuyt/${ma_xe}`);
+    const res = await apiClient.get(`/xebuyt/${ma_xe}`);
+    return res.data;
   },
 
   // Create new bus
   async createBus(data: CreateBusDto): Promise<Bus> {
-    return apiClient.post<Bus>('/xebuyt', data);
+    const res = await apiClient.post("/xebuyt", data);
+    return res.data;
   },
 
   // Update bus
   async updateBus(ma_xe: number, data: UpdateBusDto): Promise<Bus> {
-    return apiClient.put<Bus>(`/xebuyt/${ma_xe}`, data);
+    const res = await apiClient.put(`/xebuyt/${ma_xe}`, data);
+    return res.data;
   },
 
   // Delete bus
   async deleteBus(ma_xe: number): Promise<void> {
-    return apiClient.delete<void>(`/xebuyt/${ma_xe}`);
+    await apiClient.delete(`/xebuyt/${ma_xe}`);
   },
 
-  // Get bus location
+  // Get bus location history / latest positions for a bus
   async getBusLocation(ma_xe: number): Promise<BusLocation[]> {
-    return apiClient.get<BusLocation[]>(`/vitrixe?ma_xe=${ma_xe}`);
-  }
+    const res = await apiClient.get(`/vitrixe`, { params: { ma_xe } });
+    return res.data;
+  },
+
+  // If backend provides tracking data endpoint (optional)
+  async getRealtimeTracking(params?: { schoolId?: number }): Promise<BusTrackingData[]> {
+    const res = await apiClient.get("/tracking", { params });
+    return res.data;
+  },
 };
 
 export default busService;
+export { busService };

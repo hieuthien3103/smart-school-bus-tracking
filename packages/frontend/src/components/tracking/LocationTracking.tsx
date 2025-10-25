@@ -1,116 +1,127 @@
-// Refactored LocationTracking component using modern architecture
-import { useState, useCallback, memo } from 'react';
-import { MapPin, RefreshCw, Filter, Bus, Navigation, Clock, Users, List, Map } from 'lucide-react';
-import { useBusTracking } from '../../hooks';
-import { BusCard } from './BusCard';
-import { FilterButtons } from './FilterButtons';
-import { SearchBox } from './SearchBox';
-import { BusDetailPanel } from './BusDetailPanel';
-import { useSchedules } from '../../contexts/SchedulesContext';
+// Refactored LocationTracking component using new useBusTracking hook + socket integration
+import { useState, useCallback, memo, useEffect } from "react";import {
+  MapPin,
+  RefreshCw,
+  Filter,
+  Bus as BusIcon,
+  Navigation,
+  Users,
+  List,
+  Map,
+} from "lucide-react";
+import { useBusTracking } from "../../hooks";
+import BusCard from "./BusCard";
+import { FilterButtons } from "./FilterButtons";
+import SearchBox from "./SearchBox";
+import BusDetailPanel from "./BusDetailPanel";
+// removed useSchedules import because SchedulesContext doesn't expose schedulesData
+import { useSocket } from "../../contexts/SocketContext";
 
 const LocationTracking = () => {
   // Use custom hook for all bus tracking logic
-
-  // Lấy dữ liệu từ hook, fallback về mảng rỗng nếu undefined/null
   const {
-    buses = [],
-    loading,
-    error,
-    fetchBuses,
+    buses,
+    busLocations,
+    filteredBuses,
+    searchResults,
+    selectedBus,
+    setSelectedBus,
+    filterStatus,
+    setFilterStatus,
+    searchQuery,
+    setSearchQuery,
+    setSearchResults,
+    autoRefresh,
+    setAutoRefresh,
     getMarkers,
+    handleLocationUpdate,
   } = useBusTracking();
 
-  // State cho filter, search, selectedBus, autoRefresh nếu cần
-  const [selectedBus, setSelectedBus] = useState<number | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Socket
+  const { onLocationUpdate, offLocationUpdate, joinRoom } = useSocket();
+
+  // Local UI state
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  // Nếu cần filterStatus, setFilterStatus thì tự tạo thêm state tương tự
-  // const [filterStatus, setFilterStatus] = useState<string>('');
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
-  // Get schedule data from SchedulesContext
-  const { schedulesData: scheduleDataRaw } = useSchedules();
-  // Fallback nếu scheduleDataRaw undefined/null
-  const scheduleData = Array.isArray(scheduleDataRaw) ? scheduleDataRaw : [];
-
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
-
-  // Helper function for status colors
+  // status color helper
   const getStatusColor = useCallback((status: string) => {
-    switch (status.toLowerCase()) {
-      case 'đang di chuyển':
-        return 'text-green-600 bg-green-100 border-green-200';
-      case 'dừng đón khách':
-        return 'text-blue-600 bg-blue-100 border-blue-200';
-      case 'nghỉ trưa':
-        return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-      case 'sự cố':
-        return 'text-red-600 bg-red-100 border-red-200';
-      default:
-        return 'text-gray-600 bg-gray-100 border-gray-200';
+    const s = (status ?? "").toLowerCase();
+    if (s.includes("đang") || s.includes("di chuyển") || s.includes("moving")) {
+      return "text-green-600 bg-green-100 border-green-200";
     }
+    if (s.includes("dừng") || s.includes("đón")) {
+      return "text-blue-600 bg-blue-100 border-blue-200";
+    }
+    if (s.includes("bảo")) {
+      return "text-yellow-600 bg-yellow-100 border-yellow-200";
+    }
+    return "text-gray-600 bg-gray-100 border-gray-200";
   }, []);
 
-  // Handle bus selection with toggle behavior
-  const handleBusSelect = useCallback((busId: number) => {
-    setSelectedBus(selectedBus === busId ? null : busId);
-  }, [selectedBus, setSelectedBus]);
+  // socket handler: map server payload to hook's handleLocationUpdate
+  const socketHandler = useCallback(
+    (payload: any) => {
+      // optional: debug
+      // console.debug("Socket payload:", payload);
+      handleLocationUpdate(payload);
+    },
+    [handleLocationUpdate]
+  );
 
-  // Map View Component
-  const MapView = () => {
-    // Debug log to check for duplicates in render
-  console.log('MapView rendering with buses:', filteredBuses.map((b) => ({ id: b.id, busNumber: b.busNumber })));
-    
-    return (
-      <div className="relative bg-gradient-to-br from-blue-50 to-green-50 h-96 rounded-lg border-2 border-dashed border-gray-300">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center">
-          <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg font-medium">Chế độ xem bản đồ</p>
-          <p className="text-gray-400 text-sm">Sẽ tích hợp Google Maps/OpenStreetMap</p>
-        </div>
-      </div>
-      
-      {/* Simulate bus markers */}
-      {Array.isArray(buses) && buses.length > 0 ? (
-        buses.map((bus, index) => {
-          // Nếu có logic search/filter thì bổ sung ở đây
-          return (
-            <div
-              key={`map-marker-${bus.id}`}
-              className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transform transition-all hover:scale-110 ${
-                bus.status === 'Đang di chuyển' ? 'bg-green-500' :
-                bus.status === 'Dừng đón khách' ? 'bg-blue-500' :
-                bus.status === 'Sự cố' ? 'bg-red-500' : 'bg-gray-500'
-              } ${selectedBus === bus.id ? 'ring-4 ring-white ring-opacity-60 scale-125' : ''}`}
-              style={{ left: `${20 + index * 15}%`, top: `${30 + index * 20}%` }}
-              onClick={() => setSelectedBus(selectedBus === bus.id ? null : bus.id)}
-              title={`${bus.busNumber || bus.name || bus.ten_xe || ''} - ${bus.route || ''}`}
-            >
-              <Bus className="w-3 h-3 text-white absolute top-0.5 left-0.5" />
-            </div>
-          );
-        })
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400">Không có dữ liệu xe buýt</div>
-      )}
-    </div>
-    );
+  useEffect(() => {
+    // join generic room if needed (e.g., school context) - optional
+    try {
+      joinRoom && joinRoom({ role: "parent" });
+    } catch (e) {
+      // ignore
+    }
+    // subscribe
+    onLocationUpdate && onLocationUpdate(socketHandler);
+    return () => {
+      offLocationUpdate && offLocationUpdate(socketHandler);
+    };
+  }, [onLocationUpdate, offLocationUpdate, socketHandler, joinRoom]);
+
+  // Search handlers
+  const handleSearchSelect = (bus: any) => {
+    setSearchQuery(String(bus.busNumber ?? bus.id ?? ""));
+    setShowSearchResults(false);
+    // bus passed in searchResults is a normalized bus, so setSelectedBus directly
+    setSelectedBus(bus ?? null);
   };
 
-  // Calculate real-time stats
-  const totalBuses = Array.isArray(buses) ? buses.length : 0;
-  const activeBuses = Array.isArray(buses) ? buses.filter((bus: any) => bus.status === 'Đang di chuyển').length : 0;
-  const pausedBuses = Array.isArray(buses) ? buses.filter((bus: any) => bus.status === 'Dừng đón khách').length : 0;
-  
-  // Calculate total students from ALL schedules (not just bus locations) 
-  // because one bus can have multiple schedules
-  const totalStudents = Array.isArray(scheduleData) && scheduleData.length > 0
-    ? scheduleData.reduce((sum: number, schedule: any) => sum + (schedule.students ?? 0), 0)
-    : 0;
-  
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+  };
 
+  // bus selection toggle: setSelectedBus expects a NormalizedBus | null
+  const handleBusSelect = useCallback(
+    (busId: number) => {
+      setSelectedBus((prev: any) => {
+        if (prev && prev.id === busId) return null;
+        const found = (buses ?? []).find((b: any) => b.id === busId) ?? null;
+        return found;
+      });
+    },
+    [buses, setSelectedBus]
+  );
+
+  // Markers used by map (if you integrate map lib)
+  const markers = getMarkers ? getMarkers() : [];
+
+  // Stats
+  const totalBuses = Array.isArray(buses) ? buses.length : 0;
+  const activeBuses = Array.isArray(buses)
+    ? buses.filter((b: any) => (b.status ?? "").toLowerCase().includes("đang")).length
+    : 0;
+  const pausedBuses = Array.isArray(buses)
+    ? buses.filter((b: any) => (b.status ?? "").toLowerCase().includes("dừng")).length
+    : 0;
+  // derive total students from buses (backend may provide students count in normalized bus)
+  const totalStudents = Array.isArray(buses) ? buses.reduce((sum: number, bus: any) => sum + (bus.students ?? 0), 0) : 0;
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -123,7 +134,7 @@ const LocationTracking = () => {
               <p className="text-2xl font-bold text-gray-900">{totalBuses}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Bus className="h-6 w-6 text-blue-600" />
+              <BusIcon className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -171,18 +182,18 @@ const LocationTracking = () => {
           <h1 className="text-2xl font-bold text-gray-900">Theo dõi vị trí xe buýt</h1>
           <p className="text-gray-600">Giám sát thời gian thực vị trí và trạng thái các xe buýt</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              autoRefresh 
-                ? 'bg-green-100 text-green-700 border border-green-200' 
-                : 'bg-gray-100 text-gray-600 border border-gray-200'
+              autoRefresh
+                ? "bg-green-100 text-green-700 border border-green-200"
+                : "bg-gray-100 text-gray-600 border border-gray-200"
             }`}
           >
             {autoRefresh ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {autoRefresh ? 'Đang cập nhật' : 'Tạm dừng'}
+            {autoRefresh ? "Đang cập nhật" : "Tạm dừng"}
           </button>
         </div>
       </div>
@@ -193,7 +204,7 @@ const LocationTracking = () => {
           <div className="flex-1">
             <SearchBox
               searchQuery={searchQuery}
-              searchResults={searchResults}
+              searchResults={searchResults ?? []}
               showSearchResults={showSearchResults}
               onSearchChange={setSearchQuery}
               onSearchSelect={handleSearchSelect}
@@ -201,70 +212,10 @@ const LocationTracking = () => {
               onToggleSearchResults={setShowSearchResults}
             />
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-gray-500" />
-            <FilterButtons
-              filterStatus={filterStatus}
-              onFilterChange={setFilterStatus}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Bus className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Tổng xe</p>
-              <p className="text-xl font-semibold text-gray-900">{buses.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Navigation className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Đang di chuyển</p>
-              <p className="text-xl font-semibold text-gray-900">
-                {buses.filter((b: any) => b.status === 'Đang di chuyển').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Dừng đón khách</p>
-              <p className="text-xl font-semibold text-gray-900">
-                {buses.filter((b: any) => b.status === 'Dừng đón khách').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Users className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Học sinh</p>
-              <p className="text-xl font-semibold text-gray-900">
-                {buses.reduce((sum: number, bus: any) => sum + (bus.students ?? 0), 0)}
-              </p>
-            </div>
+            <FilterButtons filterStatus={filterStatus} onFilterChange={setFilterStatus} />
           </div>
         </div>
       </div>
@@ -279,25 +230,21 @@ const LocationTracking = () => {
               <h3 className="font-semibold text-gray-900">
                 Vị trí xe buýt ({filteredBuses.length}/{busLocations.length})
               </h3>
-              
+
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
-                  onClick={() => setViewMode('map')}
+                  onClick={() => setViewMode("map")}
                   className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === 'map' 
-                      ? 'bg-white text-gray-900 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
+                    viewMode === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   <Map className="w-4 h-4" />
                   Bản đồ
                 </button>
                 <button
-                  onClick={() => setViewMode('list')}
+                  onClick={() => setViewMode("list")}
                   className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-white text-gray-900 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
+                    viewMode === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   <List className="w-4 h-4" />
@@ -305,25 +252,49 @@ const LocationTracking = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-4">
-              {viewMode === 'map' ? (
-                <MapView />
+              {viewMode === "map" ? (
+                // Placeholder map view (integrate real map library as needed)
+                <div className="relative bg-gradient-to-br from-blue-50 to-green-50 h-96 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg font-medium">Chế độ xem bản đồ</p>
+                      <p className="text-gray-400 text-sm">Tích hợp Google Maps/OpenStreetMap</p>
+                    </div>
+                  </div>
+
+                  {/* Simulated markers based on normalized buses */}
+                  {markers.map((m, idx) => (
+                    <div
+                      key={`marker-${m.id}`}
+                      className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transform transition-all hover:scale-110 bg-blue-500 ${
+                        selectedBus?.id === m.id ? "ring-4 ring-white ring-opacity-60 scale-125" : ""
+                      }`}
+                      style={{ left: `${10 + (idx % 10) * 8}%`, top: `${20 + ((idx % 5) * 12)}%` }}
+                      onClick={() => handleBusSelect(m.id)}
+                      title={`${m.label}`}
+                    >
+                      <BusIcon className="w-3 h-3 text-white" />
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {filteredBuses.length > 0 ? (
-                    filteredBuses.map((bus: any) => (
+                    filteredBuses.map((bus) => (
                       <BusCard
                         key={`bus-card-${bus.id}`}
                         bus={bus}
-                        isSelected={selectedBus === bus.id}
+                        isSelected={selectedBus?.id === bus.id}
                         onSelect={handleBusSelect}
                         getStatusColor={getStatusColor}
                       />
                     ))
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      <Bus className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <BusIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p>Không tìm thấy xe buýt phù hợp</p>
                     </div>
                   )}
@@ -335,12 +306,7 @@ const LocationTracking = () => {
 
         {/* Bus Details Panel */}
         <div>
-            {/* Nếu BusDetailPanel cần prop busLocations, truyền buses */}
-            <BusDetailPanel
-              selectedBusId={selectedBus}
-              busLocations={buses}
-              getStatusColor={getStatusColor}
-            />
+          <BusDetailPanel selectedBusId={selectedBus?.id ?? null} busLocations={buses} getStatusColor={getStatusColor} />
         </div>
       </div>
     </div>

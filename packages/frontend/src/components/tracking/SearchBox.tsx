@@ -1,14 +1,14 @@
 // SearchBox component for searching buses
-import React from 'react';
-import { Search, X, Bus } from 'lucide-react';
-import type { BusLocation } from '../../types';
+import React from "react";
+import { Search, X, Bus as BusIcon } from "lucide-react";
+import type { NormalizedBus } from "../../hooks/useBusTracking";
 
 interface SearchBoxProps {
   searchQuery: string;
-  searchResults: BusLocation[];
+  searchResults: NormalizedBus[];
   showSearchResults: boolean;
   onSearchChange: (query: string) => void;
-  onSearchSelect: (bus: BusLocation) => void;
+  onSearchSelect: (bus: NormalizedBus) => void;
   onClearSearch: () => void;
   onToggleSearchResults: (show: boolean) => void;
 }
@@ -45,7 +45,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           </button>
         )}
       </div>
-      
+
       {/* Search Dropdown */}
       {showSearchResults && searchResults.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -56,11 +56,11 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
               className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
             >
               <div className="p-2 bg-blue-100 rounded-lg">
-                <Bus className="h-4 w-4 text-blue-600" />
+                <BusIcon className="h-4 w-4 text-blue-600" />
               </div>
               <div className="flex-1">
                 <div className="font-medium text-gray-900">{bus.busNumber}</div>
-                <div className="text-sm text-gray-600">{bus.route} • {bus.driver}</div>
+                <div className="text-sm text-gray-600">{bus.route ?? ""} • {bus.driver ?? ""}</div>
               </div>
               <span className="text-xs text-gray-500">{bus.status}</span>
             </div>
@@ -70,3 +70,5 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     </div>
   );
 };
+
+export default SearchBox;
