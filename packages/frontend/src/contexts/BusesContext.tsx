@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { Bus } from '../types';
 import busService from '../services/api/busService';
@@ -50,5 +49,12 @@ export const BusesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 export const useBuses = () => {
   const context = useContext(BusesContext);
   if (!context) throw new Error('useBuses must be used within a BusesProvider');
+  return context;
+};
+
+// Added alias for backward compatibility with code importing `useBusesContext`
+export const useBusesContext = () => {
+  const context = useContext(BusesContext);
+  if (!context) throw new Error('useBusesContext must be used within a BusesProvider');
   return context;
 };

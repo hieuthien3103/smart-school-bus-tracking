@@ -5,7 +5,7 @@ import axios from "axios";
  * Sử dụng VITE_API_BASE nếu đã cấu hình environment.
  */
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:4000/api",
+  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:5000/api",
   headers: {
     "Content-Type": "application/json",
   },
