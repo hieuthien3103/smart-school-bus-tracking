@@ -1,47 +1,39 @@
 import React, { useState } from 'react';
 import { Bus, User, Lock, Eye, EyeOff } from 'lucide-react';
 
-interface LoginProps {
-  onLogin: (username: string, password: string) => Promise<boolean>;
-}
+import { useAuth } from '../../contexts/AuthContext';
 
-const Login = ({ onLogin }: LoginProps) => {
-  const [userType, setUserType] = useState<'admin' | 'parent' | 'driver'>('parent');
+const Login = ({ onLogin }: { onLogin?: any }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Optionally: store error message
+  const [errorMsg, setErrorMsg] = useState('');
 
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate input
+    setErrorMsg('');
     if (!username.trim() || !password.trim()) {
-      alert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
+      setErrorMsg('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
       return;
     }
-    
     setIsLoading(true);
-
     try {
-      const success = await onLogin(username, password);
-      if (!success) {
-        alert('Sai tên đăng nhập hoặc mật khẩu!');
-      }
-    } catch (error) {
-      alert('Đã xảy ra lỗi khi đăng nhập!');
+      await login({
+        username: username, // hoặc tai_khoan nếu backend yêu cầu
+        password: password
+      });
+      // Sau khi login thành công, AuthContext sẽ tự redirect hoặc reload nếu cần
+    } catch (error: any) {
+      setErrorMsg(error?.message || 'Đã xảy ra lỗi khi đăng nhập!');
     } finally {
       setIsLoading(false);
     }
   };
-
-  const userTypeOptions = [
-    { value: 'parent', label: 'Phụ huynh', icon: '👨‍👩‍👧‍👦', color: 'bg-green-500' },
-    { value: 'driver', label: 'Tài xế', icon: '🚌', color: 'bg-blue-500' },
-    { value: 'admin', label: 'Quản trị viên', icon: '⚙️', color: 'bg-purple-500' }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -59,30 +51,6 @@ const Login = ({ onLogin }: LoginProps) => {
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* User Type Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Loại tài khoản
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {userTypeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setUserType(option.value as any)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      userType === option.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">{option.icon}</div>
-                    <div className="text-xs font-medium">{option.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -126,6 +94,11 @@ const Login = ({ onLogin }: LoginProps) => {
               </div>
             </div>
 
+            {/* Error message */}
+            {errorMsg && (
+              <div className="text-red-600 text-sm text-center">{errorMsg}</div>
+            )}
+
             {/* Login Button */}
             <button
               type="submit"
@@ -142,49 +115,6 @@ const Login = ({ onLogin }: LoginProps) => {
               )}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Tài khoản demo:</h3>
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername('parent');
-                  setPassword('parent123');
-                  setUserType('parent');
-                }}
-                className="text-left p-2 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
-              >
-                <strong>Phụ huynh:</strong> parent / parent123
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername('driver');
-                  setPassword('driver123');
-                  setUserType('driver');
-                }}
-                className="text-left p-2 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
-              >
-                <strong>Tài xế:</strong> driver / driver123
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername('admin');
-                  setPassword('admin123');
-                  setUserType('admin');
-                }}
-                className="text-left p-2 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
-              >
-                <strong>Admin:</strong> admin / admin123
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-2 italic">
-              💡 Nhấp vào tài khoản để tự động điền thông tin
-            </p>
-          </div>
         </div>
       </div>
     </div>

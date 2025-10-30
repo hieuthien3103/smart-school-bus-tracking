@@ -11,7 +11,7 @@ import { ENDPOINTS } from "../services/api/config";
 
 // Auth types
 interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
   rememberMe?: boolean;
 }
@@ -61,9 +61,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
-          apiClient.setToken(storedToken);
-
-          // Verify token is still valid
+          // Optionally: set default Authorization header for axios
+          // apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
           await verifyToken();
         }
       } catch (error) {
@@ -80,11 +79,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Verify token validity
   const verifyToken = async () => {
     try {
-      const response = await apiClient.get<User>(ENDPOINTS.AUTH.PROFILE);
-      if (response.success && response.data) {
-        setUser(response.data);
+      const response = await apiClient.get(ENDPOINTS.AUTH.PROFILE);
+      if (response.data && response.data.success && response.data.data) {
+        setUser(response.data.data);
       } else {
-        throw new Error(response.message || "Token verification failed");
+        throw new Error(response.data?.message || "Token verification failed");
       }
     } catch (error) {
       console.error("Token verification failed:", error);
@@ -96,10 +95,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const clearAuth = useCallback(() => {
     setUser(null);
     setToken(null);
-    apiClient.clearToken();
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
-    localStorage.removeItem("refresh_token");
+  // Optionally: delete Authorization header
+  // delete apiClient.defaults.headers.common['Authorization'];
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("auth_user");
+  localStorage.removeItem("refresh_token");
   }, []);
 
   // Login function
@@ -107,29 +107,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
 
-      const response = await apiClient.post<AuthResponse>(
-        ENDPOINTS.AUTH.LOGIN,
-        credentials
-      );
-
-      if (!response.success || !response.data) {
-        throw new Error(response.message || "Login failed");
+      const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, credentials);
+      if (!response.data || !response.data.success || !response.data.data) {
+        throw new Error(response.data?.message || "Login failed");
       }
-
-      const { user: authUser, token: authToken, refreshToken } = response.data;
-
-      // Update state
+      const { user: authUser, token: authToken, refreshToken } = response.data.data;
       setUser(authUser);
       setToken(authToken);
-
-      // Update API client
-      apiClient.setToken(authToken);
-
-      // Store in localStorage
+      // Optionally: set default Authorization header for axios
+      // apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       localStorage.setItem("auth_token", authToken);
       localStorage.setItem("auth_user", JSON.stringify(authUser));
       localStorage.setItem("refresh_token", refreshToken);
-
       console.log("Login successful:", authUser.username);
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -158,24 +147,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!storedRefreshToken) {
         throw new Error("No refresh token available");
       }
-      const response = await apiClient.post<AuthResponse>(
-        ENDPOINTS.AUTH.REFRESH,
-        { refreshToken: storedRefreshToken }
-      );
-
-      if (!response.success || !response.data) {
-        throw new Error(response.message || "Token refresh failed");
+      const response = await apiClient.post(ENDPOINTS.AUTH.REFRESH, { refreshToken: storedRefreshToken });
+      if (!response.data || !response.data.success || !response.data.data) {
+        throw new Error(response.data?.message || "Token refresh failed");
       }
-
-      const {
-        user: authUser,
-        token: newToken,
-        refreshToken: newRefreshToken,
-      } = response.data;
-
+      const { user: authUser, token: newToken, refreshToken: newRefreshToken } = response.data.data;
       setUser(authUser);
       setToken(newToken);
-      apiClient.setToken(newToken);
+      // Optionally: set default Authorization header for axios
+      // apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
       localStorage.setItem("auth_token", newToken);
       localStorage.setItem("auth_user", JSON.stringify(authUser));
       localStorage.setItem("refresh_token", newRefreshToken);
@@ -189,16 +169,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Update user profile
   const updateProfile = useCallback(async (updates: Partial<User>) => {
     try {
-      const response = await apiClient.put<User>(
-        ENDPOINTS.AUTH.PROFILE,
-        updates
-      );
-
-      if (response.success && response.data) {
-        setUser(response.data);
-        localStorage.setItem("auth_user", JSON.stringify(response.data));
+      const response = await apiClient.put(ENDPOINTS.AUTH.PROFILE, updates);
+      if (response.data && response.data.success && response.data.data) {
+        setUser(response.data.data);
+        localStorage.setItem("auth_user", JSON.stringify(response.data.data));
       } else {
-        throw new Error(response.message || "Profile update failed");
+        throw new Error(response.data?.message || "Profile update failed");
       }
     } catch (error) {
       console.error("Profile update failed:", error);

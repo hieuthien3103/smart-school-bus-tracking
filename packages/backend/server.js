@@ -12,6 +12,7 @@ const busRoutes = require('./src/routes/buses');
 const scheduleRoutes = require('./src/routes/schedules');
 const routeRoutes = require('./src/routes/routes');
 const reportRoutes = require('./src/routes/reports');
+const authRoutes = require('./src/routes/auth');
 const app = express();
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }));
@@ -21,6 +22,8 @@ if (process.env.NODE_ENV === 'development') { app.use(morgan('dev')); }
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use('/api', limiter);
 app.get('/health', (req, res) => { res.json({ success: true, message: 'Server is running', timestamp: new Date().toISOString() }); });
+console.log('✅ Loading auth routes');
+app.use('/api/auth', authRoutes);
 console.log('✅ Loading students routes');
 app.use('/api/students', studentRoutes);
 
