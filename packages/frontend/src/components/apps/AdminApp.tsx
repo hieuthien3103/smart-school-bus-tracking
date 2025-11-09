@@ -149,12 +149,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             break;
           case 'bus':
             // Update bus in global context with correct database fields
+            const driverId = formData.driver_id || formData.ma_tai_xe;
             const busUpdate: Partial<import('../../types').Bus> = {
-              bien_so: formData.bien_so,
-              suc_chua: Number(formData.suc_chua),
-              ma_tai_xe: formData.ma_tai_xe ? Number(formData.ma_tai_xe) : null,
-              trang_thai: formData.trang_thai
+              bien_so: formData.license_plate || formData.bien_so,
+              suc_chua: Number(formData.capacity || formData.suc_chua),
+              ma_tai_xe: driverId && driverId !== '' ? Number(driverId) : null,
+              trang_thai: formData.status || formData.trang_thai
             };
+            console.log('Bus update data:', busUpdate); // Debug log
             updateBus(editingItem.ma_xe, busUpdate);
             alert('Cập nhật xe buýt thành công!');
             break;
@@ -207,12 +209,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             break;
           case 'bus':
             // Add bus using global context with correct database fields
+            const newDriverId = formData.driver_id || formData.ma_tai_xe;
             const newBus: Omit<import('../../types').Bus, 'ma_xe'> = {
-              bien_so: formData.bien_so,
-              suc_chua: Number(formData.suc_chua),
-              ma_tai_xe: formData.ma_tai_xe ? Number(formData.ma_tai_xe) : null,
-              trang_thai: formData.trang_thai
+              bien_so: formData.license_plate || formData.bien_so,
+              suc_chua: Number(formData.capacity || formData.suc_chua),
+              ma_tai_xe: newDriverId && newDriverId !== '' ? Number(newDriverId) : null,
+              trang_thai: formData.status || formData.trang_thai
             };
+            console.log('New bus data:', newBus); // Debug log
             addBus(newBus);
             alert('Thêm xe buýt mới thành công!');
             break;
@@ -320,8 +324,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     // Guard against non-array driversData
     const safeDriversData = Array.isArray(driversData) ? driversData : [];
     return safeDriversData.map((driver) => ({
-      value: driver.ho_ten,
-      label: `${driver.ho_ten}`
+      value: driver.ma_tai_xe,  // Use ma_tai_xe (driver ID) as value
+      label: `${driver.ho_ten} (ID: ${driver.ma_tai_xe})`  // Display name with ID
     }));
   };
 
@@ -494,14 +498,16 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             label: 'Biển số xe', 
             type: 'text', 
             required: true, 
-            placeholder: 'VD: 30A-10001, 29B-12345' 
+            placeholder: 'VD: 30A-10001, 29B-12345',
+            defaultValue: editingItem?.bien_so
           },
           { 
             name: 'capacity', 
             label: 'Sức chứa', 
             type: 'number', 
             required: true, 
-            placeholder: 'VD: 40 (số ghế ngồi tối đa)' 
+            placeholder: 'VD: 40 (số ghế ngồi tối đa)',
+            defaultValue: editingItem?.suc_chua
           },
           { 
             name: 'driver_id', 
@@ -509,7 +515,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             type: 'select', 
             required: false,
             placeholder: 'Chọn tài xế phụ trách xe này (không bắt buộc)',
-            options: generateDriverOptions()
+            options: generateDriverOptions(),
+            defaultValue: editingItem?.ma_tai_xe
           },
           { 
             name: 'status', 
@@ -521,7 +528,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               { value: 'dang_su_dung', label: '🚌 Đang sử dụng' },
               { value: 'bao_duong', label: '🔧 Bảo dưỡng' }
             ], 
-            required: true 
+            required: true,
+            defaultValue: editingItem?.trang_thai
           }
         ];
       default:
@@ -566,10 +574,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         title={getModalTitle()}
       >
         <Form
-          fields={getFormFields().map(field => ({
-            ...field,
-            defaultValue: editingItem ? editingItem[field.name] : field.defaultValue
-          }))}
+          fields={getFormFields()}
           onSubmit={handleFormSubmit}
           onCancel={() => setShowModal(false)}
           isEditing={!!editingItem}

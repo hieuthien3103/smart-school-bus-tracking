@@ -13,11 +13,17 @@ class Bus {
 
   static async create(data) {
     const { bien_so, suc_chua, trang_thai, ma_tai_xe } = data;
+    // Handle null, empty string, or invalid driver ID
+    const driverId = ma_tai_xe === null || ma_tai_xe === '' || ma_tai_xe === 'null' 
+      ? null 
+      : Number(ma_tai_xe);
+    const cleanDriverId = isNaN(driverId) ? null : driverId;
+    
     const [result] = await db.execute(
       `INSERT INTO xebuyt (bien_so, suc_chua, trang_thai, ma_tai_xe) VALUES (?, ?, ?, ?)`,
-      [bien_so, suc_chua, trang_thai || 'san_sang', ma_tai_xe || null]
+      [bien_so, suc_chua, trang_thai || 'san_sang', cleanDriverId]
     );
-    return { ma_xe: result.insertId, ...data };
+    return { ma_xe: result.insertId, bien_so, suc_chua, trang_thai: trang_thai || 'san_sang', ma_tai_xe: cleanDriverId };
   }
 
   static async update(ma_xe, data) {
@@ -39,7 +45,11 @@ class Bus {
     }
     if (data.ma_tai_xe !== undefined) {
       updates.push('ma_tai_xe=?');
-      values.push(data.ma_tai_xe);
+      // Handle null, empty string, or invalid driver ID
+      const driverId = data.ma_tai_xe === null || data.ma_tai_xe === '' || data.ma_tai_xe === 'null' 
+        ? null 
+        : Number(data.ma_tai_xe);
+      values.push(isNaN(driverId) ? null : driverId);
     }
 
     if (updates.length === 0) {
