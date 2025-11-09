@@ -38,6 +38,7 @@ const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps
   const { schedules } = useSchedules();
   const { students } = useStudents();
   const { notifications } = useNotifications();
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const error = null;  
   
   // Calculate real-time stats from actual data with useMemo for proper re-rendering
@@ -51,8 +52,8 @@ const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps
   totalRoutes: schedules.length,
   activeRoutes: schedules.filter(s => s.trang_thai_lich === 'dang_chay').length,
   completedRoutes: schedules.filter(s => s.trang_thai_lich === 'hoan_thanh').length,
-  totalAlerts: notifications?.length ?? 0
-}), [buses, schedules, drivers, students, notifications]);
+  totalAlerts: safeNotifications.length
+}), [buses, schedules, drivers, students, safeNotifications]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -110,7 +111,7 @@ const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps
     };
   }, [onNavigate, onAddNew]);
 
-const recentActivities = notifications.map((n) => ({
+const recentActivities = safeNotifications.map((n) => ({
   id: n.ma_tb,
   type: n.ma_tai_xe ? 'driver' : 'alert',
   message: n.noi_dung,
@@ -118,7 +119,7 @@ const recentActivities = notifications.map((n) => ({
   status: 'info'
 }));
 
-const activeAlerts = notifications
+const activeAlerts = safeNotifications
   .filter(n => n.noi_dung?.toLowerCase().includes('sự cố') || n.noi_dung?.toLowerCase().includes('chậm'))
   .map((n) => ({
     id: n.ma_tb,

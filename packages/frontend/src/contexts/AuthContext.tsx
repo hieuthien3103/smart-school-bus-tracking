@@ -16,13 +16,6 @@ interface LoginCredentials {
   rememberMe?: boolean;
 }
 
-interface AuthResponse {
-  user: User;
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -80,14 +73,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const verifyToken = async () => {
     try {
       const response = await apiClient.get(ENDPOINTS.AUTH.PROFILE);
-      if (response.data && response.data.success && response.data.data) {
-        setUser(response.data.data);
+      if (response.data && response.data.success) {
+        // Profile endpoint returns success, use localStorage data
+        // User data is already set from localStorage
+        return;
       } else {
         throw new Error(response.data?.message || "Token verification failed");
       }
     } catch (error) {
       console.error("Token verification failed:", error);
-      clearAuth();
+      // Don't clear auth on profile check failure during init
+      // Only clear on actual login/refresh failures
     }
   };
 
@@ -111,7 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!response.data || !response.data.success || !response.data.data) {
         throw new Error(response.data?.message || "Login failed");
       }
-      const { user: authUser, token: authToken, refreshToken } = response.data.data;
+  const { user: authUser, token: authToken, refreshToken } = response.data.data;
       setUser(authUser);
       setToken(authToken);
       // Optionally: set default Authorization header for axios
@@ -119,7 +115,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem("auth_token", authToken);
       localStorage.setItem("auth_user", JSON.stringify(authUser));
       localStorage.setItem("refresh_token", refreshToken);
-      console.log("Login successful:", authUser.username);
+      const displayName =
+        (authUser &&
+          (authUser.username || authUser.tai_khoan || authUser.email || authUser.ho_ten)) ||
+        'unknown-user';
+      console.log('Login successful:', displayName);
     } catch (error: any) {
       console.error("Login failed:", error);
       throw new Error(error.message || "Login failed");

@@ -71,4 +71,82 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Get user profile (for token verification)
+router.get('/profile', async (req, res) => {
+  try {
+    // Get token from header
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No token provided' 
+      });
+    }
+
+    // In a real app, decode JWT token to get user info
+    // For now, return mock profile based on localStorage
+    // Since we don't have real JWT, just return success
+    return res.json({
+      success: true,
+      data: null, // Frontend will use localStorage data
+      message: 'Profile endpoint - use localStorage data'
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ', 
+      error: err.message 
+    });
+  }
+});
+
+// Logout endpoint
+router.post('/logout', async (req, res) => {
+  try {
+    // In a real app, invalidate token here
+    res.json({
+      success: true,
+      message: 'Đăng xuất thành công'
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ', 
+      error: err.message 
+    });
+  }
+});
+
+// Refresh token endpoint
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No refresh token provided' 
+      });
+    }
+
+    // In a real app, verify refresh token and issue new access token
+    // For now, return mock tokens
+    return res.json({
+      success: true,
+      data: {
+        token: 'dummy-token-refreshed',
+        refreshToken: 'dummy-refresh-new',
+        expiresIn: 3600
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi máy chủ', 
+      error: err.message 
+    });
+  }
+});
+
 module.exports = router;

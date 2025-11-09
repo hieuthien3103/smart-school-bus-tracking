@@ -317,14 +317,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
 
   // Generate dynamic options from current data
   const generateDriverOptions = () => {
-    return driversData.map((driver) => ({
+    // Guard against non-array driversData
+    const safeDriversData = Array.isArray(driversData) ? driversData : [];
+    return safeDriversData.map((driver) => ({
       value: driver.ho_ten,
       label: `${driver.ho_ten}`
     }));
   };
 
   const generateBusOptions = () => {
-    return busesData.map(bus => ({
+    // Guard against non-array busesData
+    const safeBusesData = Array.isArray(busesData) ? busesData : [];
+    return safeBusesData.map(bus => ({
       value: bus.bien_so,
       label: `${bus.bien_so} (${bus.suc_chua} chỗ ngồi)`
     }));

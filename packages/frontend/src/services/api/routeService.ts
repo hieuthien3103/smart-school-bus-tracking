@@ -12,32 +12,42 @@ export const routeService = {
     limit?: number;
     search?: string;
   }): Promise<Route[]> {
-    return apiClient.get<Route[]>('/tuyenduong', { params });
+    const response = await apiClient.get('/tuyenduong', { params });
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   },
 
   // Get route by ID
   async getRouteById(ma_tuyen: number): Promise<Route> {
-    return apiClient.get<Route>(`/tuyenduong/${ma_tuyen}`);
+    const response = await apiClient.get(`/tuyenduong/${ma_tuyen}`);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Create new route
   async createRoute(data: CreateRouteDto): Promise<Route> {
-    return apiClient.post<Route>('/tuyenduong', data);
+    const response = await apiClient.post('/tuyenduong', data);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Update route
   async updateRoute(ma_tuyen: number, data: UpdateRouteDto): Promise<Route> {
-    return apiClient.put<Route>(`/tuyenduong/${ma_tuyen}`, data);
+    const response = await apiClient.put(`/tuyenduong/${ma_tuyen}`, data);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Delete route
   async deleteRoute(ma_tuyen: number): Promise<void> {
-    return apiClient.delete<void>(`/tuyenduong/${ma_tuyen}`);
+    await apiClient.delete<void>(`/tuyenduong/${ma_tuyen}`);
   },
 
   // Get route details (stops in route)
   async getRouteDetails(ma_tuyen: number): Promise<RouteDetail[]> {
-    return apiClient.get<RouteDetail[]>(`/chitiettuyenduong?ma_tuyen=${ma_tuyen}`);
+    const response = await apiClient.get(`/chitiettuyenduong?ma_tuyen=${ma_tuyen}`);
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 };
 

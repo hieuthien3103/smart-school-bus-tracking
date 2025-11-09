@@ -16,26 +16,34 @@ export const scheduleService = {
     ma_tai_xe?: number;
     ngay_chay?: string;
   }): Promise<Schedule[]> {
-    return apiClient.get<Schedule[]>('/lichtrinh', { params });
+    const response = await apiClient.get('/lichtrinh', { params });
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   },
 
   // Get schedule by ID
   async getScheduleById(ma_lich: number): Promise<Schedule> {
-    return apiClient.get<Schedule>(`/lichtrinh/${ma_lich}`);
+    const response = await apiClient.get(`/lichtrinh/${ma_lich}`);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Create new schedule
   async createSchedule(data: CreateScheduleDto): Promise<Schedule> {
-    return apiClient.post<Schedule>('/lichtrinh', data);
+    const response = await apiClient.post('/lichtrinh', data);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Update schedule
   async updateSchedule(ma_lich: number, data: UpdateScheduleDto): Promise<Schedule> {
-    return apiClient.put<Schedule>(`/lichtrinh/${ma_lich}`, data);
+    const response = await apiClient.put(`/lichtrinh/${ma_lich}`, data);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Delete schedule
   async deleteSchedule(ma_lich: number): Promise<void> {
-    return apiClient.delete<void>(`/lichtrinh/${ma_lich}`);
+    await apiClient.delete<void>(`/lichtrinh/${ma_lich}`);
   }
 };
