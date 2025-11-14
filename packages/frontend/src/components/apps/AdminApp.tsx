@@ -96,7 +96,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     setShowModal(true);
   };
 
-  const handleFormSubmit = (formData: any) => {
+  const handleFormSubmit = async (formData: any) => {
     try {
       // Validate form data
       if (!formData || Object.keys(formData).length === 0) {
@@ -109,10 +109,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         switch (modalType) {
           case 'schedule':
             // UpdateSchedule method with database field names
-            updateSchedule(editingItem.ma_lich_trinh, {
-              ma_tuyen: formData.ma_tuyen,
-              ma_xe: formData.ma_xe,
-              ma_tai_xe: formData.ma_tai_xe,
+            await updateSchedule(editingItem.ma_lich, {
+              ma_tuyen: Number(formData.ma_tuyen),
+              ma_xe: Number(formData.ma_xe),
+              ma_tai_xe: Number(formData.ma_tai_xe),
               ngay_chay: formData.ngay_chay,
               gio_bat_dau: formData.gio_bat_dau,
               gio_ket_thuc: formData.gio_ket_thuc,
@@ -130,7 +130,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               ma_diem_tra: Number(formData.ma_diem_tra),
               trang_thai: formData.trang_thai
             };
-            updateStudent(editingItem.ma_hoc_sinh, studentUpdate);
+            await updateStudent(editingItem.ma_hoc_sinh, studentUpdate);
             alert('Cập nhật học sinh thành công!');
             break;
           case 'driver':
@@ -144,20 +144,19 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               mat_khau: formData.mat_khau,
               ma_ql: formData.ma_ql ? Number(formData.ma_ql) : null
             };
-            updateDriver(editingItem.ma_tai_xe, driverUpdate);
+            await updateDriver(editingItem.ma_tai_xe, driverUpdate);
             alert('Cập nhật tài xế thành công!');
             break;
           case 'bus':
             // Update bus in global context with correct database fields
-            const driverId = formData.driver_id || formData.ma_tai_xe;
             const busUpdate: Partial<import('../../types').Bus> = {
-              bien_so: formData.license_plate || formData.bien_so,
-              suc_chua: Number(formData.capacity || formData.suc_chua),
-              ma_tai_xe: driverId && driverId !== '' ? Number(driverId) : null,
-              trang_thai: formData.status || formData.trang_thai
+              bien_so: formData.bien_so,
+              suc_chua: Number(formData.suc_chua),
+              ma_tai_xe: formData.ma_tai_xe && formData.ma_tai_xe !== '' ? Number(formData.ma_tai_xe) : null,
+              trang_thai: formData.trang_thai
             };
             console.log('Bus update data:', busUpdate); // Debug log
-            updateBus(editingItem.ma_xe, busUpdate);
+            await updateBus(editingItem.ma_xe, busUpdate);
             alert('Cập nhật xe buýt thành công!');
             break;
         }
@@ -166,8 +165,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
         switch (modalType) {
           case 'schedule':
             // addSchedule method
-            const newScheduleData: Omit<Schedule, 'ma_lich_trinh'> = {
-              ma_lich: Number(formData.ma_lich),
+            const newScheduleData: Omit<Schedule, 'ma_lich'> = {
               ma_tuyen: Number(formData.ma_tuyen),
               ma_xe: Number(formData.ma_xe),
               ma_tai_xe: Number(formData.ma_tai_xe),
@@ -176,7 +174,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               gio_ket_thuc: formData.gio_ket_thuc,
               trang_thai_lich: formData.trang_thai_lich
             };
-            addSchedule(newScheduleData);
+            await addSchedule(newScheduleData);
             alert('Thêm lịch trình mới thành công!');
             break;
           case 'student':
@@ -190,7 +188,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               ma_diem_tra: Number(formData.ma_diem_tra),
               trang_thai: formData.trang_thai
             };
-            addStudent(newStudentData);
+            await addStudent(newStudentData);
             alert('Thêm học sinh mới thành công!');
             break;
           case 'driver':
@@ -204,20 +202,19 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               mat_khau: formData.mat_khau,
               ma_ql: formData.ma_ql ? Number(formData.ma_ql) : null
             };
-            addDriver(newDriver);
+            await addDriver(newDriver);
             alert('Thêm tài xế mới thành công!');
             break;
           case 'bus':
             // Add bus using global context with correct database fields
-            const newDriverId = formData.driver_id || formData.ma_tai_xe;
             const newBus: Omit<import('../../types').Bus, 'ma_xe'> = {
-              bien_so: formData.license_plate || formData.bien_so,
-              suc_chua: Number(formData.capacity || formData.suc_chua),
-              ma_tai_xe: newDriverId && newDriverId !== '' ? Number(newDriverId) : null,
-              trang_thai: formData.status || formData.trang_thai
+              bien_so: formData.bien_so,
+              suc_chua: Number(formData.suc_chua),
+              ma_tai_xe: formData.ma_tai_xe && formData.ma_tai_xe !== '' ? Number(formData.ma_tai_xe) : null,
+              trang_thai: formData.trang_thai
             };
             console.log('New bus data:', newBus); // Debug log
-            addBus(newBus);
+            await addBus(newBus);
             alert('Thêm xe buýt mới thành công!');
             break;
         }
@@ -333,21 +330,51 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
     // Guard against non-array busesData
     const safeBusesData = Array.isArray(busesData) ? busesData : [];
     return safeBusesData.map(bus => ({
-      value: bus.bien_so,
+      value: bus.ma_xe,  // Use ma_xe (bus ID) as value
       label: `${bus.bien_so} (${bus.suc_chua} chỗ ngồi)`
     }));
   };
 
   const generateRouteOptions = () => {
-    // Get unique routes from existing schedules + default routes
-  const existingRoutes = schedules.map((s: Schedule) => `Tuyến ${s.ma_tuyen}`);
-    const defaultRoutes = ['Tuyến A1', 'Tuyến B2', 'Tuyến C3', 'Tuyến D4', 'Tuyến E5'];
-    const allRoutes = [...new Set([...defaultRoutes, ...existingRoutes])];
+    // TODO: Replace with actual routes from RouteContext when available
+    // For now, create options from existing schedules or use mock data
+    const uniqueRoutes = new Map<number, string>();
     
-    return allRoutes.map(route => ({
-      value: route,
-      label: `${route} - Khu vực`
+    // Get routes from schedules
+    schedules.forEach((s: Schedule) => {
+      if (s.ma_tuyen && !uniqueRoutes.has(s.ma_tuyen)) {
+        const routeName = s.tuyen?.ten_tuyen || `Tuyến ${s.ma_tuyen}`;
+        uniqueRoutes.set(s.ma_tuyen, routeName);
+      }
+    });
+    
+    // Add default routes if empty
+    if (uniqueRoutes.size === 0) {
+      [1, 2, 3, 4, 5].forEach(id => uniqueRoutes.set(id, `Tuyến ${id}`));
+    }
+    
+    return Array.from(uniqueRoutes.entries()).map(([id, name]) => ({
+      value: id,  // Use ma_tuyen (route ID) as value
+      label: name
     }));
+  };
+
+  const generateParentOptions = () => {
+    // TODO: Replace with actual parents data from context
+    // For now return empty array with placeholder option
+    return [
+      { value: '1', label: 'Nguyễn Văn A (Phụ huynh mẫu)' },
+      { value: '2', label: 'Trần Thị B (Phụ huynh mẫu)' }
+    ];
+  };
+
+  const generateStopOptions = () => {
+    // TODO: Replace with actual stops data from context
+    // For now return empty array with placeholder option
+    return [
+      { value: '1', label: 'Trạm 1 - Ngã tư ABC' },
+      { value: '2', label: 'Trạm 2 - Cổng trường' }
+    ];
   };
 
   // Get form fields for modal
@@ -357,34 +384,58 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
       case 'schedule':
         return [
           { 
-            name: 'route_id', 
+            name: 'ma_tuyen', 
             label: 'Tuyến đường', 
             type: 'select', 
             required: true,
             placeholder: 'Chọn tuyến đường cho lịch trình',
-            options: generateRouteOptions()
+            options: generateRouteOptions(),
+            defaultValue: editingItem?.ma_tuyen
           },
           { 
-            name: 'driver_id', 
+            name: 'ma_tai_xe', 
             label: 'Tài xế', 
             type: 'select', 
             required: true,
             placeholder: 'Chọn tài xế phụ trách',
-            options: generateDriverOptions()
+            options: generateDriverOptions(),
+            defaultValue: editingItem?.ma_tai_xe
           },
           { 
-            name: 'bus_id', 
+            name: 'ma_xe', 
             label: 'Xe buýt', 
             type: 'select', 
             required: true,
             placeholder: 'Chọn xe buýt sử dụng',
-            options: generateBusOptions()
+            options: generateBusOptions(),
+            defaultValue: editingItem?.ma_xe
           },
-          { name: 'schedule_date', label: 'Ngày lịch trình', type: 'date', required: true, placeholder: 'Chọn ngày thực hiện lịch trình' },
-          { name: 'start_time', label: 'Giờ bắt đầu', type: 'time', required: true, placeholder: 'VD: 07:00 (giờ bắt đầu chuyến)' },
-          { name: 'end_time', label: 'Giờ kết thúc', type: 'time', required: true, placeholder: 'VD: 08:30 (giờ dự kiến kết thúc)' },
           { 
-            name: 'status', 
+            name: 'ngay_chay', 
+            label: 'Ngày lịch trình', 
+            type: 'date', 
+            required: true, 
+            placeholder: 'Chọn ngày thực hiện lịch trình',
+            defaultValue: editingItem?.ngay_chay
+          },
+          { 
+            name: 'gio_bat_dau', 
+            label: 'Giờ bắt đầu', 
+            type: 'time', 
+            required: true, 
+            placeholder: 'VD: 07:00 (giờ bắt đầu chuyến)',
+            defaultValue: editingItem?.gio_bat_dau
+          },
+          { 
+            name: 'gio_ket_thuc', 
+            label: 'Giờ kết thúc', 
+            type: 'time', 
+            required: true, 
+            placeholder: 'VD: 08:30 (giờ dự kiến kết thúc)',
+            defaultValue: editingItem?.gio_ket_thuc
+          },
+          { 
+            name: 'trang_thai_lich', 
             label: 'Trạng thái', 
             type: 'select', 
             placeholder: 'Chọn trạng thái lịch trình',
@@ -394,107 +445,91 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
               { value: 'hoan_thanh', label: '✅ Hoàn thành' },
               { value: 'huy', label: '❌ Đã hủy' }
             ], 
-            required: true 
+            required: true,
+            defaultValue: editingItem?.trang_thai_lich
           }
         ];
       case 'student':
         return [
-          { name: 'name', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Nguyễn Văn An' },
-          { name: 'student_code', label: 'Mã học sinh', type: 'text', required: true, placeholder: 'VD: HS001, HS002' },
-          { name: 'date_of_birth', label: 'Ngày sinh', type: 'date', required: true, placeholder: 'Chọn ngày sinh' },
+          { name: 'ho_ten', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Nguyễn Văn An', defaultValue: editingItem?.ho_ten },
+          { name: 'ma_hs', label: 'Mã học sinh', type: 'text', required: true, placeholder: 'VD: HS001, HS002', defaultValue: editingItem?.ma_hs },
+          { name: 'lop', label: 'Lớp', type: 'text', required: true, placeholder: 'VD: 6A, 7B, 8C', defaultValue: editingItem?.lop },
           { 
-            name: 'gender', 
-            label: 'Giới tính', 
+            name: 'ma_phu_huynh', 
+            label: 'Phụ huynh', 
             type: 'select', 
             required: true,
-            placeholder: 'Chọn giới tính',
-            options: [
-              { value: 'male', label: '👦 Nam' },
-              { value: 'female', label: '👧 Nữ' }
-            ]
+            placeholder: 'Chọn phụ huynh',
+            options: generateParentOptions(),
+            defaultValue: editingItem?.ma_phu_huynh
           },
-          { name: 'grade', label: 'Khối', type: 'text', required: true, placeholder: 'VD: 6, 7, 8, 9' },
-          { name: 'class', label: 'Lớp', type: 'text', required: true, placeholder: 'VD: 6A, 7B, 8C' },
-          { name: 'address', label: 'Địa chỉ', type: 'text', required: true, placeholder: 'VD: 123 Đường ABC, Quận 1, TP.HCM' },
-          { name: 'pickup_address', label: 'Điểm đón', type: 'text', required: true, placeholder: 'VD: Ngã tư ABC, gần siêu thị XYZ' },
-          { name: 'dropoff_address', label: 'Điểm trả', type: 'text', required: true, placeholder: 'VD: Cổng trường THCS XYZ' },
           { 
-            name: 'school_id', 
-            label: 'Trường học', 
+            name: 'ma_diem_don', 
+            label: 'Điểm đón', 
             type: 'select', 
             required: true,
-            placeholder: 'Chọn trường học',
-            options: [] // TODO: Add school options from database
+            placeholder: 'Chọn điểm đón',
+            options: generateStopOptions(),
+            defaultValue: editingItem?.ma_diem_don
           },
           { 
-            name: 'route_id', 
-            label: 'Tuyến đường', 
+            name: 'ma_diem_tra', 
+            label: 'Điểm trả', 
             type: 'select', 
-            required: false,
-            placeholder: 'Chọn tuyến đường (tùy chọn)',
-            options: generateRouteOptions()
+            required: true,
+            placeholder: 'Chọn điểm trả',
+            options: generateStopOptions(),
+            defaultValue: editingItem?.ma_diem_tra
           },
           { 
-            name: 'stop_id', 
-            label: 'Điểm dừng', 
-            type: 'select', 
-            required: false,
-            placeholder: 'Chọn điểm dừng (tùy chọn)',
-            options: [] // TODO: Add stop options based on selected route
-          },
-          { 
-            name: 'status', 
+            name: 'trang_thai', 
             label: 'Trạng thái', 
             type: 'select', 
             required: true,
             placeholder: 'Chọn trạng thái',
             options: [
-              { value: 'active', label: '✅ Đang học' },
-              { value: 'inactive', label: '⏸️ Tạm nghỉ' },
-              { value: 'transferred', label: '🔄 Chuyển trường' },
-              { value: 'graduated', label: '🎓 Tốt nghiệp' }
-            ]
-          },
-          { name: 'medical_notes', label: 'Ghi chú y tế', type: 'textarea', required: false, placeholder: 'VD: Dị ứng thuốc kháng sinh' },
-          { name: 'allergies', label: 'Dị ứng', type: 'textarea', required: false, placeholder: 'VD: Dị ứng hải sản, phấn hoa' },
-          { name: 'emergency_instructions', label: 'Hướng dẫn khẩn cấp', type: 'textarea', required: false, placeholder: 'VD: Liên hệ bố mẹ ngay khi có vấn đề' }
+              { value: 'dang_hoc', label: '✅ Đang học' },
+              { value: 'nghi_hoc', label: '⏸️ Tạm nghỉ' },
+              { value: 'chuyen_truong', label: '🔄 Chuyển trường' },
+              { value: 'tot_nghiep', label: '🎓 Tốt nghiệp' }
+            ],
+            defaultValue: editingItem?.trang_thai
+          }
         ];
       case 'driver':
         return [
-          { name: 'name', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Trần Văn Tài Xế' },
-          { name: 'phone', label: 'Điện thoại', type: 'text', required: true, placeholder: 'VD: 0987654321' },
-          { name: 'license_number', label: 'Số bằng lái', type: 'text', required: true, placeholder: 'VD: D123456789' },
-          { name: 'experience', label: 'Kinh nghiệm (năm)', type: 'number', required: true, placeholder: 'VD: 5 (số năm kinh nghiệm lái xe)' },
-          { name: 'hire_date', label: 'Ngày tuyển dụng', type: 'date', required: true, placeholder: 'Chọn ngày bắt đầu làm việc' },
+          { name: 'ho_ten', label: 'Họ tên', type: 'text', required: true, placeholder: 'VD: Trần Văn Tài Xế', defaultValue: editingItem?.ho_ten },
+          { name: 'so_dien_thoai', label: 'Điện thoại', type: 'text', required: true, placeholder: 'VD: 0987654321', defaultValue: editingItem?.so_dien_thoai },
+          { name: 'so_gplx', label: 'Số bằng lái', type: 'text', required: true, placeholder: 'VD: D123456789', defaultValue: editingItem?.so_gplx },
+          { name: 'tai_khoan', label: 'Tài khoản', type: 'text', required: true, placeholder: 'VD: driver01', defaultValue: editingItem?.tai_khoan },
+          { name: 'mat_khau', label: 'Mật khẩu', type: 'text', required: !editingItem, placeholder: 'Để trống nếu không đổi mật khẩu' },
           { 
-            name: 'current_bus_id', 
-            label: 'Xe buýt phụ trách', 
+            name: 'ma_ql', 
+            label: 'Quản lý', 
             type: 'select', 
             required: false,
-            placeholder: 'Chọn xe buýt để phụ trách (tùy chọn)',
-            options: generateBusOptions()
+            placeholder: 'Chọn quản lý (tùy chọn)',
+            options: [{ value: '', label: 'Không có' }],
+            defaultValue: editingItem?.ma_ql
           },
           { 
-            name: 'status', 
+            name: 'trang_thai', 
             label: 'Trạng thái', 
             type: 'select', 
             required: true,
             placeholder: 'Chọn trạng thái làm việc',
             options: [
-              { value: 'active', label: '✅ Đang làm việc' },
-              { value: 'inactive', label: '⏸️ Tạm nghỉ' },
-              { value: 'on_leave', label: '🏖️ Nghỉ phép' }
-            ]
-          },
-          { name: 'emergency_contact_name', label: 'Người liên hệ khẩn cấp', type: 'text', required: false, placeholder: 'VD: Nguyễn Thị Vợ' },
-          { name: 'emergency_contact_phone', label: 'SĐT liên hệ khẩn cấp', type: 'text', required: false, placeholder: 'VD: 0912345678' },
-          { name: 'address', label: 'Địa chỉ', type: 'text', required: false, placeholder: 'VD: 123 Đường ABC, Quận 1' },
-          { name: 'notes', label: 'Ghi chú', type: 'textarea', required: false, placeholder: 'VD: Ghi chú về tài xế' }
+              { value: 'dang_lam', label: '✅ Đang làm việc' },
+              { value: 'nghi_viec', label: '⏸️ Nghỉ việc' },
+              { value: 'nghi_phep', label: '🏖️ Nghỉ phép' }
+            ],
+            defaultValue: editingItem?.trang_thai
+          }
         ];
       case 'bus':
         return [
           { 
-            name: 'license_plate', 
+            name: 'bien_so', 
             label: 'Biển số xe', 
             type: 'text', 
             required: true, 
@@ -502,7 +537,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             defaultValue: editingItem?.bien_so
           },
           { 
-            name: 'capacity', 
+            name: 'suc_chua', 
             label: 'Sức chứa', 
             type: 'number', 
             required: true, 
@@ -510,7 +545,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             defaultValue: editingItem?.suc_chua
           },
           { 
-            name: 'driver_id', 
+            name: 'ma_tai_xe', 
             label: 'Tài xế phụ trách', 
             type: 'select', 
             required: false,
@@ -519,7 +554,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ user, onLogout }) => {
             defaultValue: editingItem?.ma_tai_xe
           },
           { 
-            name: 'status', 
+            name: 'trang_thai', 
             label: 'Trạng thái', 
             type: 'select', 
             placeholder: 'Chọn trạng thái xe buýt', 

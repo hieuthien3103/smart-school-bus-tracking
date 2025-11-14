@@ -69,7 +69,7 @@ const StudentManagement: React.FC = () => {
       ma_phu_huynh: s.ma_phu_huynh != null ? String(s.ma_phu_huynh) : '',
       ma_diem_don: s.ma_diem_don != null ? String(s.ma_diem_don) : '',
       ma_diem_tra: s.ma_diem_tra != null ? String(s.ma_diem_tra) : '',
-      trang_thai: s.trang_thai ?? 'hoat_dong',
+      trang_thai: s.trang_thai ?? 'dang_hoc',
     });
     setShowModal(true);
   };
@@ -109,7 +109,7 @@ const StudentManagement: React.FC = () => {
         ma_phu_huynh: Number(data.ma_phu_huynh),
         ma_diem_don: Number(data.ma_diem_don),
         ma_diem_tra: Number(data.ma_diem_tra),
-        trang_thai: data.trang_thai ?? 'hoat_dong',
+        trang_thai: data.trang_thai ?? 'dang_hoc',
       };
 
       if (editingStudent && (editingStudent.ma_hs ?? editingStudent.id)) {
@@ -142,21 +142,68 @@ const StudentManagement: React.FC = () => {
     }
   };
 
-  // Build form fields (Form expects option.value string)
-  const formFieldsBase = [
-    { name: 'ho_ten', type: 'text', placeholder: 'Tên học sinh', required: true },
-    { name: 'lop', type: 'text', placeholder: 'Lớp', required: true },
-    { name: 'ma_phu_huynh', type: 'select', placeholder: 'Chọn phụ huynh', options: parentsOptions, required: true },
-    { name: 'ma_diem_don', type: 'select', placeholder: 'Chọn trạm đón', options: stopsOptions, required: true },
-    { name: 'ma_diem_tra', type: 'select', placeholder: 'Chọn trạm trả', options: stopsOptions, required: true },
-    { name: 'trang_thai', type: 'select', options: [{ value: 'hoat_dong', label: 'Hoạt động' }, { value: 'nghi', label: 'Nghỉ' }], required: true },
-  ];
-
-  // attach defaultValue from editingStudent
-  const formFields = formFieldsBase.map((f) => {
-    const defaultValue = editingStudent ? (editingStudent as any)[f.name] ?? '' : '';
-    return { ...f, defaultValue };
-  });
+  // Build form fields with labels and proper defaultValues
+  const formFields = useMemo(() => {
+    return [
+      { 
+        name: 'ho_ten', 
+        label: 'Họ tên',
+        type: 'text' as const, 
+        placeholder: 'VD: Nguyễn Văn A', 
+        required: true,
+        defaultValue: editingStudent?.ho_ten ?? ''
+      },
+      { 
+        name: 'lop', 
+        label: 'Lớp',
+        type: 'text' as const, 
+        placeholder: 'VD: 6A, 7B', 
+        required: true,
+        defaultValue: editingStudent?.lop ?? ''
+      },
+      { 
+        name: 'ma_phu_huynh', 
+        label: 'Phụ huynh',
+        type: 'select' as const, 
+        placeholder: 'Chọn phụ huynh', 
+        options: parentsOptions, 
+        required: true,
+        defaultValue: editingStudent?.ma_phu_huynh ?? ''
+      },
+      { 
+        name: 'ma_diem_don', 
+        label: 'Trạm đón',
+        type: 'select' as const, 
+        placeholder: 'Chọn trạm đón', 
+        options: stopsOptions, 
+        required: true,
+        defaultValue: editingStudent?.ma_diem_don ?? ''
+      },
+      { 
+        name: 'ma_diem_tra', 
+        label: 'Trạm trả',
+        type: 'select' as const, 
+        placeholder: 'Chọn trạm trả', 
+        options: stopsOptions, 
+        required: true,
+        defaultValue: editingStudent?.ma_diem_tra ?? ''
+      },
+      { 
+        name: 'trang_thai', 
+        label: 'Trạng thái',
+        type: 'select' as const, 
+        placeholder: 'Chọn trạng thái',
+        options: [
+          { value: 'dang_hoc', label: '✅ Đang học' }, 
+          { value: 'nghi_hoc', label: '⏸️ Nghỉ học' },
+          { value: 'chuyen_truong', label: '🔄 Chuyển trường' },
+          { value: 'tot_nghiep', label: '🎓 Tốt nghiệp' }
+        ], 
+        required: true,
+        defaultValue: editingStudent?.trang_thai ?? 'dang_hoc'
+      },
+    ];
+  }, [editingStudent, parentsOptions, stopsOptions]);
 
   return (
     <div className="p-4">
@@ -186,13 +233,13 @@ const StudentManagement: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-4 py-2 text-left">ID</th>
-                  <th className="px-4 py-2 text-left">Tên</th>
-                  <th className="px-4 py-2 text-left">Lớp</th>
-                  <th className="px-4 py-2 text-left">Phụ huynh</th>
-                  <th className="px-4 py-2 text-left">Tuyến</th>
-                  <th className="px-4 py-2 text-left">Trạng thái</th>
-                  <th className="px-4 py-2 text-left">Thao tác</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phụ huynh</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm đón/trả</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,8 +283,18 @@ const StudentManagement: React.FC = () => {
                           )}
                         </td>
                         <td className="px-4 py-2">
-                          <span className={`px-2 py-1 text-xs rounded ${s.trang_thai === 'hoat_dong' ? 'bg-green-100 text-green-800' : s.trang_thai === 'nghi' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-                            {s.trang_thai === 'hoat_dong' ? 'Hoạt động' : s.trang_thai === 'nghi' ? 'Nghỉ' : (s.trang_thai ?? '-')}
+                          <span className={`px-2 py-1 text-xs rounded font-medium ${
+                            s.trang_thai === 'dang_hoc' ? 'bg-green-100 text-green-800' : 
+                            s.trang_thai === 'nghi_hoc' ? 'bg-yellow-100 text-yellow-800' : 
+                            s.trang_thai === 'chuyen_truong' ? 'bg-blue-100 text-blue-800' : 
+                            s.trang_thai === 'tot_nghiep' ? 'bg-purple-100 text-purple-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {s.trang_thai === 'dang_hoc' ? '✅ Đang học' : 
+                             s.trang_thai === 'nghi_hoc' ? '⏸️ Nghỉ học' : 
+                             s.trang_thai === 'chuyen_truong' ? '🔄 Chuyển trường' : 
+                             s.trang_thai === 'tot_nghiep' ? '🎓 Tốt nghiệp' : 
+                             s.trang_thai ?? '-'}
                           </span>
                         </td>
                         <td className="px-4 py-2">
