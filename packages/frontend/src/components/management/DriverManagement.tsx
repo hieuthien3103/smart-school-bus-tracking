@@ -168,9 +168,9 @@ const DriverManagement = ({ driversData, onAdd, onEdit, onDelete }: DriverManage
                   </td>
                   <td className="p-4 text-gray-600">{driver.so_dien_thoai}</td>
                   <td className="p-4 text-gray-600">{driver.so_gplx}</td>
-                  <td className="p-4 text-gray-600">-</td>
-                  <td className="p-4 text-gray-600">-</td>
-                  <td className="p-4 text-gray-600">-</td>
+                  <td className="p-4 text-gray-600">{driver.kinh_nghiem} Năm</td>
+                  <td className="p-4 text-gray-600">{driver.tuyen_hien_tai}</td>
+                  <td className="p-4 text-gray-600">{driver.xe_hien_tai}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(driver.trang_thai)}`}>
                       {driver.trang_thai}
