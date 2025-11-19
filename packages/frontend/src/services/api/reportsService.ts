@@ -52,11 +52,12 @@ export const reportsService = {
   }): Promise<PerformanceData[]> {
     try {
       const response = await apiClient.get('/reports/performance', { params });
-      return (response as any).data || [];
+      const payload = response.data as any;
+      // Unwrap backend response envelope { success, data }
+      return Array.isArray(payload) ? payload : (payload?.data ?? []);
     } catch (error) {
       console.error('Error fetching performance data:', error);
-      // No fallback mock data - let error bubble up
-      throw error;
+      return []; // Return empty array on error
     }
   },
 
@@ -67,11 +68,12 @@ export const reportsService = {
   }): Promise<RouteAnalysis[]> {
     try {
       const response = await apiClient.get('/reports/routes', { params });
-      return (response as any).data || [];
+      const payload = response.data as any;
+      // Unwrap backend response envelope { success, data }
+      return Array.isArray(payload) ? payload : (payload?.data ?? []);
     } catch (error) {
       console.error('Error fetching route analysis:', error);
-      // No fallback mock data - let error bubble up
-      throw error;
+      return []; // Return empty array on error
     }
   },
 
@@ -82,11 +84,12 @@ export const reportsService = {
   }): Promise<MaintenanceData[]> {
     try {
       const response = await apiClient.get('/reports/maintenance', { params });
-      return (response as any).data || [];
+      const payload = response.data as any;
+      // Unwrap backend response envelope { success, data }
+      return Array.isArray(payload) ? payload : (payload?.data ?? []);
     } catch (error) {
       console.error('Error fetching maintenance data:', error);
-      // No fallback mock data - let error bubble up
-      throw error;
+      return []; // Return empty array on error
     }
   },
 
@@ -97,11 +100,12 @@ export const reportsService = {
   }): Promise<DriverPerformance[]> {
     try {
       const response = await apiClient.get('/reports/drivers', { params });
-      return (response as any).data || [];
+      const payload = response.data as any;
+      // Unwrap backend response envelope { success, data }
+      return Array.isArray(payload) ? payload : (payload?.data ?? []);
     } catch (error) {
       console.error('Error fetching driver performance:', error);
-      // No fallback mock data - let error bubble up
-      throw error;
+      return []; // Return empty array on error
     }
   },
 
@@ -115,9 +119,28 @@ export const reportsService = {
         apiClient.get('/students')
       ]);
 
-      const buses = busesResponse.status === 'fulfilled' ? (busesResponse.value as any)?.data?.length || 0 : 0;
-      const drivers = driversResponse.status === 'fulfilled' ? (driversResponse.value as any)?.data?.length || 0 : 0;
-      const students = studentsResponse.status === 'fulfilled' ? (studentsResponse.value as any)?.data?.length || 0 : 0;
+      // Unwrap responses properly
+      const getBusesData = () => {
+        if (busesResponse.status !== 'fulfilled') return [];
+        const payload = (busesResponse.value as any)?.data;
+        return Array.isArray(payload) ? payload : (payload?.data ?? []);
+      };
+
+      const getDriversData = () => {
+        if (driversResponse.status !== 'fulfilled') return [];
+        const payload = (driversResponse.value as any)?.data;
+        return Array.isArray(payload) ? payload : (payload?.data ?? []);
+      };
+
+      const getStudentsData = () => {
+        if (studentsResponse.status !== 'fulfilled') return [];
+        const payload = (studentsResponse.value as any)?.data;
+        return Array.isArray(payload) ? payload : (payload?.data ?? []);
+      };
+
+      const buses = getBusesData().length;
+      const drivers = getDriversData().length;
+      const students = getStudentsData().length;
 
       return {
         totalTrips: 0, // TODO: Get from API if available
@@ -129,8 +152,14 @@ export const reportsService = {
       };
     } catch (error) {
       console.error('Error fetching report stats:', error);
-      // No fallback mock data - let error bubble up
-      throw error;
+      return {
+        totalTrips: 0,
+        activeStudents: 0,
+        totalRevenue: 0,
+        onTimePercentage: 0,
+        totalBuses: 0,
+        activeDrivers: 0
+      };
     }
   }
 };

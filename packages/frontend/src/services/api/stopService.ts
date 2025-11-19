@@ -13,26 +13,34 @@ export const stopService = {
         loai_tram?: StopType;
         search?: string;
     }): Promise<Stop[]> {
-        return apiClient.get<Stop[]>('/tramxe', { params });
+        const response = await apiClient.get('/tramxe', { params });
+        const payload = response.data as any;
+        return Array.isArray(payload) ? payload : payload?.data ?? [];
     },
 
     // Get stop by ID
     async getStopById(ma_tram: number): Promise<Stop> {
-        return apiClient.get<Stop>(`/tramxe/${ma_tram}`);
+        const response = await apiClient.get(`/tramxe/${ma_tram}`);
+        const payload = response.data as any;
+        return payload?.data ?? payload;
     },
 
     // Create new stop
     async createStop(data: CreateStopDto): Promise<Stop> {
-        return apiClient.post<Stop>('/tramxe', data);
+        const response = await apiClient.post('/tramxe', data);
+        const payload = response.data as any;
+        return payload?.data ?? payload;
     },
 
     // Update stop
     async updateStop(ma_tram: number, data: UpdateStopDto): Promise<Stop> {
-        return apiClient.put<Stop>(`/tramxe/${ma_tram}`, data);
+        const response = await apiClient.put(`/tramxe/${ma_tram}`, data);
+        const payload = response.data as any;
+        return payload?.data ?? payload;
     },
 
     // Delete stop
     async deleteStop(ma_tram: number): Promise<void> {
-        return apiClient.delete<void>(`/tramxe/${ma_tram}`);
+        await apiClient.delete<void>(`/tramxe/${ma_tram}`);
     }
 };

@@ -1,12 +1,21 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Student } from '../types';
+import type { Student, Parent, Stop } from '../types';
 import studentService from '../services/api/studentService';
+import { apiClient } from '../services/api/client';
 
 interface StudentsContextType {
   students: Student[];
   loading: boolean;
   error: string | null;
+  parents: Parent[];
+  parentsLoading: boolean;
+  parentsError: string | null;
+  stops: Stop[];
+  stopsLoading: boolean;
+  stopsError: string | null;
   fetchStudents: () => Promise<void>;
+  fetchParents: () => Promise<void>;
+  fetchStops: () => Promise<void>;
   addStudent: (student: Partial<Student>) => Promise<void>;
   updateStudent: (ma_hs: number, student: Partial<Student>) => Promise<void>;
   deleteStudent: (ma_hs: number) => Promise<void>;
@@ -18,6 +27,14 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [parents, setParents] = useState<Parent[]>([]);
+  const [parentsLoading, setParentsLoading] = useState<boolean>(false);
+  const [parentsError, setParentsError] = useState<string | null>(null);
+  
+  const [stops, setStops] = useState<Stop[]>([]);
+  const [stopsLoading, setStopsLoading] = useState<boolean>(false);
+  const [stopsError, setStopsError] = useState<string | null>(null);
 
   const normalizeStudents = (raw: any[]): Student[] => {
     return (raw || []).map((s: any) => {
@@ -31,9 +48,8 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLoading(true);
     setError(null);
     try {
-      const res: any = await studentService.getStudents();
-      const raw = Array.isArray(res) ? res : (res?.data ?? []);
-      const items = normalizeStudents(raw);
+      const response = await studentService.getStudents();
+      const items = normalizeStudents(response?.data ?? []);
       setStudents(items);
     } catch (err: any) {
       console.error('StudentsProvider.fetchStudents error', err);
@@ -41,6 +57,48 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setStudents([]);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchParents = useCallback(async () => {
+    setParentsLoading(true);
+    setParentsError(null);
+    try {
+      const response = await apiClient.get('/phuhuynh');
+      const payload = response?.data;
+      const raw = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : [];
+      setParents(raw as Parent[]);
+    } catch (err: any) {
+      console.error('StudentsProvider.fetchParents error', err);
+      setParentsError(err?.message ?? 'Lỗi khi lấy danh sách phụ huynh');
+      setParents([]);
+    } finally {
+      setParentsLoading(false);
+    }
+  }, []);
+
+  const fetchStops = useCallback(async () => {
+    setStopsLoading(true);
+    setStopsError(null);
+    try {
+      const response = await apiClient.get('/tramxe');
+      const payload = response?.data;
+      const raw = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : [];
+      setStops(raw as Stop[]);
+    } catch (err: any) {
+      console.error('StudentsProvider.fetchStops error', err);
+      setStopsError(err?.message ?? 'Lỗi khi lấy danh sách trạm');
+      setStops([]);
+    } finally {
+      setStopsLoading(false);
     }
   }, []);
 
@@ -82,10 +140,28 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]);
+    fetchParents();
+    fetchStops();
+  }, [fetchStudents, fetchParents, fetchStops]);
 
   return (
-    <StudentsContext.Provider value={{ students, loading, error, fetchStudents, addStudent, updateStudent, deleteStudent }}>
+    <StudentsContext.Provider value={{ 
+      students, 
+      loading, 
+      error, 
+      parents, 
+      parentsLoading, 
+      parentsError,
+      stops,
+      stopsLoading,
+      stopsError,
+      fetchStudents, 
+      fetchParents,
+      fetchStops,
+      addStudent, 
+      updateStudent, 
+      deleteStudent 
+    }}>
       {children}
     </StudentsContext.Provider>
   );

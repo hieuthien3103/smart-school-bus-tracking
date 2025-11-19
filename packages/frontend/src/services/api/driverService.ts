@@ -13,27 +13,35 @@ export const driverService = {
     limit?: number;
     trang_thai?: 'san_sang' | 'dang_chay' | 'nghi';
   }): Promise<Driver[]> {
-    return apiClient.get<Driver[]>('/taixe', { params });
+    const response = await apiClient.get('/taixe', { params });
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   },
 
   // Get driver by ID
   async getDriverById(ma_tai_xe: number): Promise<Driver> {
-    return apiClient.get<Driver>(`/taixe/${ma_tai_xe}`);
+    const response = await apiClient.get(`/taixe/${ma_tai_xe}`);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Create new driver
   async createDriver(data: CreateDriverDto): Promise<Driver> {
-    return apiClient.post<Driver>('/taixe', data);
+    const response = await apiClient.post('/taixe', data);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Update driver
   async updateDriver(ma_tai_xe: number, data: UpdateDriverDto): Promise<Driver> {
-    return apiClient.put<Driver>(`/taixe/${ma_tai_xe}`, data);
+    const response = await apiClient.put(`/taixe/${ma_tai_xe}`, data);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   },
 
   // Delete driver
   async deleteDriver(ma_tai_xe: number): Promise<void> {
-    return apiClient.delete<void>(`/taixe/${ma_tai_xe}`);
+    await apiClient.delete<void>(`/taixe/${ma_tai_xe}`);
   }
 };
 

@@ -18,25 +18,30 @@ const busService = {
     ma_tai_xe?: number;
   }): Promise<Bus[]> {
     const res = await apiClient.get("/xebuyt", { params });
-    return res.data;
+    const payload = res.data as any;
+    // Unwrap backend response envelope { success, data }
+    return Array.isArray(payload) ? payload : (payload?.data ?? []);
   },
 
   // Get bus by ID
   async getBusById(ma_xe: number): Promise<Bus> {
     const res = await apiClient.get(`/xebuyt/${ma_xe}`);
-    return res.data;
+    const payload = res.data as any;
+    return payload?.data ?? payload;
   },
 
   // Create new bus
   async createBus(data: CreateBusDto): Promise<Bus> {
     const res = await apiClient.post("/xebuyt", data);
-    return res.data;
+    const payload = res.data as any;
+    return payload?.data ?? payload;
   },
 
   // Update bus
   async updateBus(ma_xe: number, data: UpdateBusDto): Promise<Bus> {
     const res = await apiClient.put(`/xebuyt/${ma_xe}`, data);
-    return res.data;
+    const payload = res.data as any;
+    return payload?.data ?? payload;
   },
 
   // Delete bus
@@ -47,13 +52,15 @@ const busService = {
   // Get bus location history / latest positions for a bus
   async getBusLocation(ma_xe: number): Promise<BusLocation[]> {
     const res = await apiClient.get(`/vitrixe`, { params: { ma_xe } });
-    return res.data;
+    const payload = res.data as any;
+    return Array.isArray(payload) ? payload : (payload?.data ?? []);
   },
 
   // If backend provides tracking data endpoint (optional)
   async getRealtimeTracking(params?: { schoolId?: number }): Promise<BusTrackingData[]> {
     const res = await apiClient.get("/tracking", { params });
-    return res.data;
+    const payload = res.data as any;
+    return Array.isArray(payload) ? payload : (payload?.data ?? []);
   },
 };
 

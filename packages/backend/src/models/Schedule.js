@@ -9,10 +9,10 @@ class Schedule {
         l.ma_tuyen,
         l.ma_xe,
         l.ma_tai_xe,
-        l.ngay_chay AS date,
+        l.ngay_chay,
         l.gio_bat_dau,
         l.gio_ket_thuc,
-        l.trang_thai_lich AS trang_thai,
+        l.trang_thai_lich,
         t.ten_tuyen,
         t.diem_bat_dau AS start_point,
         t.diem_ket_thuc AS end_point,
@@ -58,10 +58,10 @@ class Schedule {
         l.ma_tuyen,
         l.ma_xe,
         l.ma_tai_xe,
-        l.ngay_chay AS date,
+        l.ngay_chay,
         l.gio_bat_dau,
         l.gio_ket_thuc,
-        l.trang_thai_lich AS trang_thai,
+        l.trang_thai_lich,
         t.ten_tuyen,
         t.diem_bat_dau AS start_point,
         t.diem_ket_thuc AS end_point,
@@ -107,7 +107,7 @@ class Schedule {
       [ma_tuyen, ma_xe, ma_tai_xe, ngay_chay, gio_bat_dau, gio_ket_thuc]
     );
 
-    return { ma_lich: result.insertId, ...data, trang_thai: 'cho_chay' };
+    return { ma_lich: result.insertId, ...data, trang_thai_lich: 'cho_chay' };
   }
 
   // Cập nhật lịch trình
@@ -141,9 +141,9 @@ class Schedule {
       updates.push('gio_ket_thuc=?');
       values.push(data.gio_ket_thuc);
     }
-    if (data.trang_thai !== undefined) {
+    if (data.trang_thai !== undefined || data.trang_thai_lich !== undefined) {
       updates.push('trang_thai_lich=?');
-      values.push(data.trang_thai);
+      values.push(data.trang_thai_lich || data.trang_thai);
     }
 
     // Require at least one field to update

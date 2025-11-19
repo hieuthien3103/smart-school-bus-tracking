@@ -16,23 +16,43 @@ export const BusesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [buses, setBuses] = useState<Bus[]>([]);
 
   const fetchBuses = useCallback(async () => {
-    const data = await busService.getBuses();
-    setBuses(data);
+    try {
+      const data = await busService.getBuses();
+      setBuses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching buses:', error);
+      setBuses([]);
+    }
   }, []);
 
   const addBus = useCallback(async (bus: Omit<Bus, 'ma_xe'>) => {
-    await busService.createBus(bus);
-    await fetchBuses();
+    try {
+      await busService.createBus(bus);
+      await fetchBuses();
+    } catch (error) {
+      console.error('Error adding bus:', error);
+      throw error;
+    }
   }, [fetchBuses]);
 
   const updateBus = useCallback(async (ma_xe: number, bus: Partial<Bus>) => {
-    await busService.updateBus(ma_xe, bus);
-    await fetchBuses();
+    try {
+      await busService.updateBus(ma_xe, bus);
+      await fetchBuses();
+    } catch (error) {
+      console.error('Error updating bus:', error);
+      throw error;
+    }
   }, [fetchBuses]);
 
   const deleteBus = useCallback(async (ma_xe: number) => {
-    await busService.deleteBus(ma_xe);
-    await fetchBuses();
+    try {
+      await busService.deleteBus(ma_xe);
+      await fetchBuses();
+    } catch (error) {
+      console.error('Error deleting bus:', error);
+      throw error;
+    }
   }, [fetchBuses]);
 
   useEffect(() => {

@@ -144,25 +144,27 @@ const ScheduleManagement = ({ schedules, onAdd, onEdit, onDelete }: ScheduleMana
                 <tr key={schedule.ma_lich}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.ma_lich}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{schedule.tuyen?.ten_tuyen || schedule.ma_tuyen || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.ngay_chay}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {schedule.ngay_chay ? new Date(schedule.ngay_chay).toLocaleDateString('vi-VN') : '-'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.gio_bat_dau}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.tai_xe?.ho_ten || schedule.ma_tai_xe || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.xe?.bien_so || schedule.ma_xe || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.phan_cong ? schedule.phan_cong.length : 0}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      schedule.trang_thai_lich === 'dang_chay' ? 'bg-green-100 text-green-800' :
-                      schedule.trang_thai_lich === 'cho_chay' ? 'bg-yellow-100 text-yellow-800' :
-                      schedule.trang_thai_lich === 'hoan_thanh' ? 'bg-blue-100 text-blue-800' :
-                      schedule.trang_thai_lich === 'huy' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {schedule.trang_thai_lich === 'dang_chay' ? 'Đang chạy' :
-                        schedule.trang_thai_lich === 'cho_chay' ? 'Chờ chạy' :
-                        schedule.trang_thai_lich === 'hoan_thanh' ? 'Hoàn thành' :
-                        schedule.trang_thai_lich === 'huy' ? 'Hủy' :
-                        schedule.trang_thai_lich}
-                    </span>
+                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                    schedule.trang_thai_lich === 'dang_chay' ? 'bg-green-100 text-green-800' :
+                    schedule.trang_thai_lich === 'cho_chay' ? 'bg-yellow-100 text-yellow-800' :
+                    schedule.trang_thai_lich === 'hoan_thanh' ? 'bg-blue-100 text-blue-800' :
+                    schedule.trang_thai_lich === 'huy' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {schedule.trang_thai_lich === 'dang_chay' ? 'Đang chạy' :
+                     schedule.trang_thai_lich === 'cho_chay' ? 'Chờ chạy' :
+                     schedule.trang_thai_lich === 'hoan_thanh' ? 'Hoàn thành' :
+                     schedule.trang_thai_lich === 'huy' ? 'Hủy' :
+                     'Không xác định'}
+                  </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex space-x-2">

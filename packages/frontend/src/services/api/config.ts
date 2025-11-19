@@ -24,6 +24,10 @@ export const ENDPOINTS = {
   STUDENTS: {
     BASE: '/hocsinh', // hoặc '/students' tùy backend routing
     BY_ID: (id: number) => `/hocsinh/${id}`,
+    BY_ROUTE: (routeId: number) => `/hocsinh/tuyen/${routeId}`,
+    BY_SCHOOL: (schoolId: number) => `/hocsinh/truong/${schoolId}`,
+    BY_BUS: (busId: number) => `/hocsinh/xe/${busId}`,
+    BY_DRIVER: (driverId: number) => `/hocsinh/taixe/${driverId}`,
     BY_PARENT: (parentId: number) => `/hocsinh/phuhuynh/${parentId}`,
     BY_CLASS: (className: string) => `/hocsinh/lop/${className}`,
     UPDATE_STATUS: (id: number) => `/hocsinh/${id}/status`,

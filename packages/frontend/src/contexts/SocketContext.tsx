@@ -86,41 +86,52 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (autoConnect) {
-      const newSocket = io(API_CONFIG.SOCKET_URL, {
-        transports: ['websocket', 'polling'],
-        timeout: 20000,
-        forceNew: true,
-      });
+    if (!autoConnect) return;
+    
+    let isCleanedUp = false;
 
-      // Connection event handlers
-      newSocket.on('connect', () => {
+    const newSocket = io(API_CONFIG.SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true,
+    });
+
+    // Connection event handlers
+    newSocket.on('connect', () => {
+      if (!isCleanedUp) {
         console.log('🔌 Connected to Socket.IO server');
         setIsConnected(true);
-      });
+      }
+    });
 
-      newSocket.on('disconnect', (reason: string) => {
+    newSocket.on('disconnect', (reason: string) => {
+      if (!isCleanedUp) {
         console.log('❌ Disconnected from Socket.IO server:', reason);
         setIsConnected(false);
-      });
+      }
+    });
 
-      newSocket.on('connect_error', (error: Error) => {
+    newSocket.on('connect_error', (error: Error) => {
+      if (!isCleanedUp) {
         console.error('🚨 Socket connection error:', error);
         setIsConnected(false);
-      });
+      }
+    });
 
-      newSocket.on('roomJoined', (data: any) => {
+    newSocket.on('roomJoined', (data: any) => {
+      if (!isCleanedUp) {
         console.log('🏠 Joined rooms successfully:', data);
-      });
+      }
+    });
 
-      setSocket(newSocket);
+    setSocket(newSocket);
 
-      // Cleanup on unmount
-      return () => {
-        console.log('🧹 Cleaning up socket connection');
-        newSocket.close();
-      };
-    }
+    // Cleanup on unmount
+    return () => {
+      isCleanedUp = true;
+      console.log('🧹 Cleaning up socket connection');
+      newSocket.close();
+    };
   }, [autoConnect]);
 
   // Socket methods

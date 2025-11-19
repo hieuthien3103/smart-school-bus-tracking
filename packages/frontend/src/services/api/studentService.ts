@@ -1,6 +1,6 @@
 
-import type { Student } from '../../types';
-import { apiClient, type PaginatedResponse } from './client';
+import type { Student, PaginatedResponse } from '../../types';
+import { apiClient } from './client';
 import { ENDPOINTS } from './config';
 
 // Filters for hocsinh
@@ -24,68 +24,111 @@ export type UpdateStudentDto = Partial<CreateStudentDto>;
 class StudentService {
   // Get all students with optional filters
   async getStudents(filters?: StudentFilters): Promise<PaginatedResponse<Student>> {
-    return apiClient.getPaginated<Student>(ENDPOINTS.STUDENTS.BASE, filters);
+    const response = await apiClient.get(ENDPOINTS.STUDENTS.BASE, { params: filters });
+    const payload = response.data as any;
+    const students = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+    const page = filters?.page ?? 1;
+    const inferredLimit = students.length || 10;
+    const limit = filters?.limit ?? inferredLimit;
+    const total = students.length;
+    const pagination = {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / (limit || 1))),
+    };
+
+    return {
+      success: true,
+      data: students as Student[],
+      pagination,
+    };
   }
 
   // Get student by ID
   async getStudentById(id: number): Promise<Student> {
-    return apiClient.get<Student>(ENDPOINTS.STUDENTS.BY_ID(id));
+    const response = await apiClient.get(ENDPOINTS.STUDENTS.BY_ID(id));
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Get students by route
   async getStudentsByRoute(routeId: number): Promise<Student[]> {
-    return apiClient.get<Student[]>(ENDPOINTS.STUDENTS.BY_ROUTE(routeId));
+    const response = await apiClient.get(ENDPOINTS.STUDENTS.BY_ROUTE(routeId));
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 
   // Get students by school
   async getStudentsBySchool(schoolId: number): Promise<Student[]> {
-    return apiClient.get<Student[]>(ENDPOINTS.STUDENTS.BY_SCHOOL(schoolId));
+    const response = await apiClient.get(ENDPOINTS.STUDENTS.BY_SCHOOL(schoolId));
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 
   // Get students by bus
   async getStudentsByBus(busId: number): Promise<Student[]> {
-    return apiClient.get<Student[]>(ENDPOINTS.STUDENTS.BY_BUS(busId));
+    const response = await apiClient.get(ENDPOINTS.STUDENTS.BY_BUS(busId));
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 
   // Get students by driver
   async getStudentsByDriver(driverId: number): Promise<Student[]> {
-    return apiClient.get<Student[]>(ENDPOINTS.STUDENTS.BY_DRIVER(driverId));
+    const response = await apiClient.get(ENDPOINTS.STUDENTS.BY_DRIVER(driverId));
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 
   // Create new student
   async createStudent(studentData: CreateStudentDto): Promise<Student> {
-    return apiClient.post<Student>(ENDPOINTS.STUDENTS.BASE, studentData);
+    const response = await apiClient.post(ENDPOINTS.STUDENTS.BASE, studentData);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Update student
   async updateStudent(id: number, updates: UpdateStudentDto): Promise<Student> {
-    return apiClient.put<Student>(ENDPOINTS.STUDENTS.BY_ID(id), updates);
+    const response = await apiClient.put(ENDPOINTS.STUDENTS.BY_ID(id), updates);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Update student status (for check-in/check-out)
   async updateStudentStatus(id: number, status: string): Promise<Student> {
-    return apiClient.patch<Student>(
-      `${ENDPOINTS.STUDENTS.BY_ID(id)}/status`, 
-      { status }
+    const response = await apiClient.patch(
+      `${ENDPOINTS.STUDENTS.BY_ID(id)}/status`,
+      { status },
     );
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Delete student
   async deleteStudent(id: number): Promise<void> {
-    return apiClient.delete<void>(ENDPOINTS.STUDENTS.BY_ID(id));
+    await apiClient.delete<void>(ENDPOINTS.STUDENTS.BY_ID(id));
   }
 
   // Assign student to route
   async assignStudentToRoute(studentId: number, routeId: number, pickupStopId: number, dropoffStopId: number): Promise<Student> {
-    return apiClient.post<Student>(
+    const response = await apiClient.post(
       `${ENDPOINTS.STUDENTS.BY_ID(studentId)}/assign-route`,
-      { routeId, pickupStopId, dropoffStopId }
+      { routeId, pickupStopId, dropoffStopId },
     );
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Unassign student from route
   async unassignStudentFromRoute(studentId: number): Promise<Student> {
-    return apiClient.delete<Student>(`${ENDPOINTS.STUDENTS.BY_ID(studentId)}/unassign-route`);
+    const response = await apiClient.delete(`${ENDPOINTS.STUDENTS.BY_ID(studentId)}/unassign-route`);
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Search students
@@ -97,10 +140,12 @@ class StudentService {
 
   // Bulk operations
   async bulkUpdateStatus(studentIds: number[], status: string): Promise<Student[]> {
-    return apiClient.post<Student[]>(
-      `${ENDPOINTS.STUDENTS.BASE}/bulk-status`, 
-      { studentIds, status }
+    const response = await apiClient.post(
+      `${ENDPOINTS.STUDENTS.BASE}/bulk-status`,
+      { studentIds, status },
     );
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 
   // Import students from CSV/Excel
@@ -109,11 +154,24 @@ class StudentService {
     updated: number; 
     errors: string[]; 
   }> {
-    return apiClient.uploadFile<{ 
-      created: number; 
-      updated: number; 
-      errors: string[]; 
-    }>(`${ENDPOINTS.STUDENTS.BASE}/import`, file, onProgress);
+    if (typeof FormData === 'undefined') {
+      throw new Error('File uploads are not supported in the current environment');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post(`${ENDPOINTS.STUDENTS.BASE}/import`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (onProgress && event.total) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          onProgress(progress);
+        }
+      },
+    });
+    const payload = response.data as any;
+    return payload?.data ?? payload;
   }
 
   // Export students to CSV
@@ -128,12 +186,12 @@ class StudentService {
     }
 
     // Use apiClient for proper authentication handling
-    const response = await apiClient.get<Blob>(
+    const response = await apiClient.get(
       `${ENDPOINTS.STUDENTS.BASE}/export?${params}`,
-      { responseType: 'blob' }
+      { responseType: 'blob' },
     );
-    
-    return response;
+
+    return response.data as Blob;
   }
 
   // Get student attendance history
@@ -151,12 +209,9 @@ class StudentService {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     
-    return apiClient.get<{
-      date: string;
-      status: string;
-      checkInTime?: string;
-      checkOutTime?: string;
-    }[]>(`${ENDPOINTS.STUDENTS.BY_ID(studentId)}/attendance?${params}`);
+    const response = await apiClient.get(`${ENDPOINTS.STUDENTS.BY_ID(studentId)}/attendance?${params}`);
+    const payload = response.data as any;
+    return Array.isArray(payload) ? payload : payload?.data ?? [];
   }
 }
 

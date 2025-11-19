@@ -6,9 +6,9 @@ import { scheduleService } from '../services/api/scheduleService';
 interface SchedulesContextType {
   schedules: Schedule[];
   fetchSchedules: () => Promise<void>;
-  addSchedule: (schedule: Omit<Schedule, 'ma_lich_trinh'>) => Promise<void>;
-  updateSchedule: (ma_lich_trinh: number, schedule: Partial<Schedule>) => Promise<void>;
-  deleteSchedule: (ma_lich_trinh: number) => Promise<void>;
+  addSchedule: (schedule: Omit<Schedule, 'ma_lich'>) => Promise<void>;
+  updateSchedule: (ma_lich: number, schedule: Partial<Schedule>) => Promise<void>;
+  deleteSchedule: (ma_lich: number) => Promise<void>;
 }
 
 const SchedulesContext = createContext<SchedulesContextType | undefined>(undefined);
@@ -21,18 +21,18 @@ export const SchedulesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSchedules(data);
   }, []);
 
-  const addSchedule = useCallback(async (schedule: Omit<Schedule, 'ma_lich_trinh'>) => {
+  const addSchedule = useCallback(async (schedule: Omit<Schedule, 'ma_lich'>) => {
     await scheduleService.createSchedule(schedule);
     await fetchSchedules();
   }, [fetchSchedules]);
 
-  const updateSchedule = useCallback(async (ma_lich_trinh: number, schedule: Partial<Schedule>) => {
-    await scheduleService.updateSchedule(ma_lich_trinh, schedule);
+  const updateSchedule = useCallback(async (ma_lich: number, schedule: Partial<Schedule>) => {
+    await scheduleService.updateSchedule(ma_lich, schedule);
     await fetchSchedules();
   }, [fetchSchedules]);
 
-  const deleteSchedule = useCallback(async (ma_lich_trinh: number) => {
-    await scheduleService.deleteSchedule(ma_lich_trinh);
+  const deleteSchedule = useCallback(async (ma_lich: number) => {
+    await scheduleService.deleteSchedule(ma_lich);
     await fetchSchedules();
   }, [fetchSchedules]);
 
