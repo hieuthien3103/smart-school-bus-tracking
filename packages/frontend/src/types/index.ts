@@ -90,6 +90,8 @@ export interface Stop {
   ten_tram: string;
   dia_chi: string | null;
   loai_tram: StopType;
+  vi_do?: number | null;
+  kinh_do?: number | null;
 }
 
 // ==================== TUYẾN ĐƯỜNG (ROUTES) ====================
@@ -110,6 +112,11 @@ export interface RouteDetail {
   ma_tuyen: number;
   ma_tram: number;
   thu_tu: number;  // Thứ tự trạm trong tuyến
+  ten_tram?: string;
+  dia_chi?: string | null;
+  loai_tram?: StopType;
+  vi_do?: number | null;
+  kinh_do?: number | null;
   
   // Relations
   tram?: Stop;

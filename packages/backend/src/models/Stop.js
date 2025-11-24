@@ -3,7 +3,7 @@ const db = require('../config/database');
 class Stop {
   static async getAll() {
     const query = `
-      SELECT ma_tram, ten_tram, dia_chi, loai_tram
+      SELECT ma_tram, ten_tram, dia_chi, loai_tram, vi_do, kinh_do
       FROM tramxe
       ORDER BY ten_tram ASC
     `;
@@ -13,7 +13,7 @@ class Stop {
 
   static async getById(ma_tram) {
     const query = `
-      SELECT ma_tram, ten_tram, dia_chi, loai_tram
+      SELECT ma_tram, ten_tram, dia_chi, loai_tram, vi_do, kinh_do
       FROM tramxe
       WHERE ma_tram = ?
     `;
@@ -22,15 +22,17 @@ class Stop {
   }
 
   static async create(data) {
-    const { ten_tram, dia_chi, loai_tram } = data;
+    const { ten_tram, dia_chi, loai_tram, vi_do, kinh_do } = data;
     const query = `
-      INSERT INTO tramxe (ten_tram, dia_chi, loai_tram)
-      VALUES (?, ?, ?)
+      INSERT INTO tramxe (ten_tram, dia_chi, loai_tram, vi_do, kinh_do)
+      VALUES (?, ?, ?, ?, ?)
     `;
     const [result] = await db.execute(query, [
       ten_tram,
       dia_chi || null,
       loai_tram || 'ca_hai',
+      vi_do || null,
+      kinh_do || null,
     ]);
 
     return {
@@ -38,11 +40,13 @@ class Stop {
       ten_tram,
       dia_chi: dia_chi || null,
       loai_tram: loai_tram || 'ca_hai',
+      vi_do: vi_do || null,
+      kinh_do: kinh_do || null,
     };
   }
 
   static async update(ma_tram, data) {
-    const { ten_tram, dia_chi, loai_tram } = data;
+    const { ten_tram, dia_chi, loai_tram, vi_do, kinh_do } = data;
 
     const fields = [];
     const values = [];
@@ -58,6 +62,14 @@ class Stop {
     if (loai_tram !== undefined) {
       fields.push('loai_tram = ?');
       values.push(loai_tram);
+    }
+    if (vi_do !== undefined) {
+      fields.push('vi_do = ?');
+      values.push(vi_do);
+    }
+    if (kinh_do !== undefined) {
+      fields.push('kinh_do = ?');
+      values.push(kinh_do);
     }
 
     if (!fields.length) {

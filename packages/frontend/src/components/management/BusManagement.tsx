@@ -1,4 +1,5 @@
-import { Plus, Edit, Trash2, Bus as BusIcon, Wrench, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Edit, Trash2, Bus as BusIcon, Wrench, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import type { Bus } from '../../types';
 
 interface BusManagementProps {
@@ -9,6 +10,7 @@ interface BusManagementProps {
 }
 
 const BusManagement = ({ busesData, onAdd, onEdit, onDelete }: BusManagementProps) => {
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'san_sang':
@@ -101,10 +103,155 @@ const BusManagement = ({ busesData, onAdd, onEdit, onDelete }: BusManagementProp
         </div>
       </div>
 
+      {/* Detail Information Panel */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-6">
+        <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Chọn xe buýt để xem thông tin chi tiết</h2>
+          {selectedBus && (
+            <button
+              onClick={() => setSelectedBus(null)}
+              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+        <div className="p-6">
+          {selectedBus ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 border-b pb-2">Thông tin cơ bản</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Mã xe:</span>
+                    <span className="font-medium text-gray-900">{selectedBus.ma_xe}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Biển số:</span>
+                    <span className="font-medium text-gray-900">{selectedBus.bien_so}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Sức chứa:</span>
+                    <span className="font-medium text-gray-900">{selectedBus.suc_chua} chỗ</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Trạng thái:</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(selectedBus.trang_thai)}`}>
+                      {selectedBus.trang_thai === 'san_sang' ? 'Sẵn sàng' : selectedBus.trang_thai === 'bao_duong' ? 'Bảo dưỡng' : 'Đang sử dụng'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 border-b pb-2">Tài xế phụ trách</h3>
+                <div className="space-y-3">
+                  {selectedBus.tai_xe ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tên tài xế:</span>
+                        <span className="font-medium text-gray-900">{selectedBus.tai_xe.ho_ten}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Số điện thoại:</span>
+                        <span className="font-medium text-gray-900">{selectedBus.tai_xe.so_dien_thoai}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Bằng lái:</span>
+                        <span className="font-medium text-gray-900">{selectedBus.tai_xe.so_gplx}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Trạng thái tài xế:</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedBus.tai_xe.trang_thai === 'san_sang' ? 'Sẵn sàng' : selectedBus.tai_xe.trang_thai === 'dang_chay' ? 'Đang chạy' : 'Nghỉ'}
+                        </span>
+                      </div>
+                    </>
+                  ) : selectedBus.ma_tai_xe ? (
+                    <div className="text-gray-500 italic">Mã tài xế: {selectedBus.ma_tai_xe} (Chưa có thông tin chi tiết)</div>
+                  ) : (
+                    <div className="text-gray-500 italic">Chưa phân công tài xế</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 border-b pb-2">Vị trí hiện tại</h3>
+                <div className="space-y-3">
+                  {selectedBus.vi_tri_hien_tai ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Vĩ độ:</span>
+                        <span className="font-medium text-gray-900">{selectedBus.vi_tri_hien_tai.vi_do || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Kinh độ:</span>
+                        <span className="font-medium text-gray-900">{selectedBus.vi_tri_hien_tai.kinh_do || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tốc độ:</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedBus.vi_tri_hien_tai.toc_do ? `${selectedBus.vi_tri_hien_tai.toc_do} km/h` : '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Cập nhật:</span>
+                        <span className="font-medium text-gray-900">
+                          {selectedBus.vi_tri_hien_tai.thoi_gian ? new Date(selectedBus.vi_tri_hien_tai.thoi_gian).toLocaleString('vi-VN') : '-'}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-gray-500 italic">Chưa có thông tin vị trí</div>
+                  )}
+                </div>
+              </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t flex gap-3">
+                <button
+                  onClick={() => onEdit(selectedBus)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Chỉnh sửa thông tin
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Bạn có chắc chắn muốn xóa xe buýt này không?')) {
+                      onDelete(selectedBus.ma_xe);
+                      setSelectedBus(null);
+                    }
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Xóa xe buýt
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <BusIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium mb-2">Chưa chọn xe buýt</p>
+              <p className="text-sm">Nhấp vào một xe buýt ở bên dưới để xem thông tin chi tiết</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Buses Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {busesData.map((bus) => (
-          <div key={bus.ma_xe} className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div 
+            key={bus.ma_xe} 
+            onClick={() => setSelectedBus(bus)}
+            className={`bg-white rounded-xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${
+              selectedBus?.ma_xe === bus.ma_xe ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-100'
+            }`}
+          >
             {/* Header */}
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b">
               <div className="flex items-center justify-between">
@@ -158,7 +305,7 @@ const BusManagement = ({ busesData, onAdd, onEdit, onDelete }: BusManagementProp
             </div>
 
             {/* Actions */}
-            <div className="bg-gray-50 p-4 flex justify-end gap-2">
+            <div className="bg-gray-50 p-4 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => onEdit(bus)}
                 className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"

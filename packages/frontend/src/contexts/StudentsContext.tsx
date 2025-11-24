@@ -142,7 +142,9 @@ export const StudentsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchStudents();
     fetchParents();
     fetchStops();
-  }, [fetchStudents, fetchParents, fetchStops]);
+    // Only fetch once on mount, not on every dependency change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <StudentsContext.Provider value={{ 

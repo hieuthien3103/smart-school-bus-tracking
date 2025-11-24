@@ -72,6 +72,11 @@ console.log('✅ Loading stops routes');
 app.use('/api/stops', stopRoutes);
 app.use('/api/tramxe', stopRoutes);
 
+const busLocationRoutes = require('./src/routes/busLocations');
+console.log('✅ Loading bus location routes');
+app.use('/api/bus-locations', busLocationRoutes);
+app.use('/api/vitrixe', busLocationRoutes);
+
 console.log('✅ Loading notifications routes');
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/thongbao', notificationRoutes);
@@ -154,14 +159,37 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('busLocationUpdate', (payload = {}) => {
-    if (!payload.busId) {
+  socket.on('busLocationUpdate', async (payload = {}) => {
+    const busId = payload.busId || payload.ma_xe || payload.id;
+    if (!busId) {
       console.warn(`⚠️ Received location update without busId from ${socket.id}`, payload);
       return;
     }
 
-    emitBusEvent('busLocationUpdate', payload, payload.busId);
-    emitBusEvent('locationUpdate', payload, payload.busId);
+    // Save location to database
+    try {
+      const BusLocation = require('./src/models/BusLocation');
+      const vi_do = payload.vi_do ?? payload.latitude;
+      const kinh_do = payload.kinh_do ?? payload.longitude;
+      const toc_do = payload.toc_do ?? payload.speed;
+
+      if (vi_do != null && kinh_do != null) {
+        await BusLocation.create({
+          ma_xe: busId,
+          vi_do: Number(vi_do),
+          kinh_do: Number(kinh_do),
+          toc_do: toc_do ? Number(toc_do) : null,
+        });
+        console.log(`💾 Saved location for bus ${busId}: ${vi_do}, ${kinh_do}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error saving bus location to database:`, error);
+      // Continue to emit event even if database save fails
+    }
+
+    // Emit to connected clients
+    emitBusEvent('busLocationUpdate', payload, busId);
+    emitBusEvent('locationUpdate', payload, busId);
   });
 
   socket.on('busStatusChange', (payload = {}) => {
@@ -211,6 +239,40 @@ io.on('connection', (socket) => {
     targetRooms.forEach((room) => {
       io.to(room).emit('attendanceUpdate', enrichedPayload);
     });
+  });
+
+  // Handle delay alerts
+  socket.on('delayAlert', (payload = {}) => {
+    if (!payload.ma_xe && !payload.busId) {
+      console.warn(`⚠️ Received delay alert without busId from ${socket.id}`, payload);
+      return;
+    }
+
+    const enrichedPayload = {
+      ...payload,
+      timestamp: payload?.timestamp || new Date().toISOString(),
+      id: payload?.id || Date.now(),
+    };
+
+    // Send to admin, parents of students on this route/schedule, and the specific bus
+    const busId = payload.ma_xe || payload.busId;
+    const targetRooms = [
+      'global',
+      'role:admin',
+      busId ? `bus:${busId}` : null,
+      payload.ma_tuyen ? `route:${payload.ma_tuyen}` : null,
+      payload.ma_lich ? `schedule:${payload.ma_lich}` : null,
+    ].filter(Boolean);
+
+    targetRooms.forEach((room) => {
+      io.to(room).emit('delayAlert', enrichedPayload);
+      io.to(room).emit('notification', {
+        type: 'delay',
+        ...enrichedPayload,
+      });
+    });
+
+    console.log(`🚨 Delay alert broadcast to ${targetRooms.length} rooms:`, enrichedPayload);
   });
 
   socket.on('disconnect', (reason) => {

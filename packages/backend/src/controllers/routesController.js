@@ -54,3 +54,50 @@ exports.delete = async (req, res) => {
     return errorResponse(res, error.message, 500);
   }
 };
+
+// GET /api/routes/:id/details - Lấy chi tiết tuyến đường (các trạm)
+exports.getRouteDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const details = await Route.getRouteDetails(id);
+    return successResponse(res, details, 'Lấy chi tiết tuyến đường thành công');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};
+
+// GET /api/routes/for-role - Lấy tuyến đường theo vai trò
+exports.getRoutesForRole = async (req, res) => {
+  try {
+    const { role, userId } = req.query;
+
+    if (!role) {
+      return errorResponse(res, 'Vai trò không được để trống', 400);
+    }
+
+    let routes;
+    switch (role) {
+      case 'admin':
+        routes = await Route.getRoutesForAdmin();
+        break;
+      case 'driver':
+        if (!userId) {
+          return errorResponse(res, 'ID tài xế không được để trống', 400);
+        }
+        routes = await Route.getRoutesForDriver(parseInt(userId));
+        break;
+      case 'parent':
+        if (!userId) {
+          return errorResponse(res, 'ID phụ huynh không được để trống', 400);
+        }
+        routes = await Route.getRoutesForParent(parseInt(userId));
+        break;
+      default:
+        return errorResponse(res, 'Vai trò không hợp lệ', 400);
+    }
+
+    return successResponse(res, routes, 'Lấy danh sách tuyến đường thành công');
+  } catch (error) {
+    return errorResponse(res, error.message, 500);
+  }
+};

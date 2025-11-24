@@ -45,9 +45,32 @@ export const routeService = {
 
   // Get route details (stops in route)
   async getRouteDetails(ma_tuyen: number): Promise<RouteDetail[]> {
-    const response = await apiClient.get(`/chitiettuyenduong?ma_tuyen=${ma_tuyen}`);
+    const response = await apiClient.get(`/tuyenduong/${ma_tuyen}/details`);
     const payload = response.data as any;
     return Array.isArray(payload) ? payload : payload?.data ?? [];
+  },
+
+  // Get routes for specific role
+  async getRoutesForRole(role: 'admin' | 'driver' | 'parent', userId?: number): Promise<Route[]> {
+    const params: any = { role };
+    if (userId) {
+      params.userId = userId;
+    }
+    const response = await apiClient.get('/tuyenduong/for-role', { params });
+    const payload = response.data as any;
+    console.log('API Response for routes:', response.data);
+    // Handle both response formats: {success, data, message} or direct array
+    if (payload && payload.success && Array.isArray(payload.data)) {
+      return payload.data;
+    }
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (payload && Array.isArray(payload.data)) {
+      return payload.data;
+    }
+    console.warn('Unexpected response format:', payload);
+    return [];
   }
 };
 

@@ -15,30 +15,54 @@ const StopsContext = createContext<StopsContextType | undefined>(undefined);
 
 export const StopsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [stops, setStops] = useState<Stop[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     const fetchStops = useCallback(async () => {
-        const data = await stopService.getStops();
-        setStops(data);
-    }, []);
+        if (isFetching) return; // Prevent concurrent fetches
+        
+        setIsFetching(true);
+        try {
+            const data = await stopService.getStops();
+            setStops(data);
+        } catch (err: any) {
+            console.error('StopsProvider.fetchStops error', err);
+            // Don't clear stops on error, keep existing data
+            if (err?.response?.status === 429) {
+                console.warn('Rate limited, will retry later');
+            }
+        } finally {
+            setIsFetching(false);
+        }
+    }, [isFetching]);
 
     const addStop = useCallback(async (stop: Omit<Stop, 'ma_diem_don'>) => {
         await stopService.createStop(stop);
-        await fetchStops();
+        // Debounce refetch
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = setTimeout(() => fetchStops(), 500);
     }, [fetchStops]);
 
     const updateStop = useCallback(async (ma_diem_don: number, stop: Partial<Stop>) => {
         await stopService.updateStop(ma_diem_don, stop);
-        await fetchStops();
+        // Debounce refetch
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = setTimeout(() => fetchStops(), 500);
     }, [fetchStops]);
 
     const deleteStop = useCallback(async (ma_diem_don: number) => {
         await stopService.deleteStop(ma_diem_don);
-        await fetchStops();
+        // Debounce refetch
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = setTimeout(() => fetchStops(), 500);
     }, [fetchStops]);
 
     useEffect(() => {
         fetchStops();
-    }, [fetchStops]);
+        return () => {
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        };
+    }, []); // Only fetch once on mount
 
     return (
         <StopsContext.Provider value={{ stops, fetchStops, addStop, updateStop, deleteStop }}>
