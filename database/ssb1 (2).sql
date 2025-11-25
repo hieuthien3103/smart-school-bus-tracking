@@ -78,7 +78,7 @@ CREATE TABLE `hocsinh` (
   `ma_phu_huynh` int(11) NOT NULL,
   `ma_diem_don` int(11) NOT NULL,
   `ma_diem_tra` int(11) NOT NULL,
-  `trang_thai` enum('hoat_dong','nghi') DEFAULT 'hoat_dong'
+  `trang_thai` enum('dang_hoc','nghi_hoc','chuyen_truong','tot_nghiep') DEFAULT 'dang_hoc'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -86,16 +86,16 @@ CREATE TABLE `hocsinh` (
 --
 
 INSERT INTO `hocsinh` (`ma_hs`, `ho_ten`, `lop`, `ma_phu_huynh`, `ma_diem_don`, `ma_diem_tra`, `trang_thai`) VALUES
-(1, 'Nguyễn Minh An', '1A', 1, 1, 2, 'hoat_dong'),
-(2, 'Trần Lan Hương', '2B', 2, 3, 4, 'hoat_dong'),
-(3, 'Lê Quốc Bảo', '3A', 3, 5, 6, 'hoat_dong'),
-(4, 'Phạm Thu Trang', '1C', 4, 7, 8, 'hoat_dong'),
-(5, 'Hoàng Gia Huy', '4A', 5, 9, 10, 'hoat_dong'),
-(6, 'Vũ Mai Anh', '2A', 6, 11, 12, 'hoat_dong'),
-(7, 'Đỗ Tuấn Kiệt', '5B', 7, 13, 14, 'hoat_dong'),
-(8, 'Bùi Ngọc Hà', '1B', 8, 15, 16, 'hoat_dong'),
-(9, 'Nguyễn Văn Nam', '3B', 9, 17, 18, 'hoat_dong'),
-(10, 'Trần Thị My', '4C', 10, 19, 20, 'hoat_dong');
+(1, 'Nguyễn Minh An', '1A', 1, 1, 2, 'dang_hoc'),
+(2, 'Trần Lan Hương', '2B', 2, 3, 4, 'dang_hoc'),
+(3, 'Lê Quốc Bảo', '3A', 3, 5, 6, 'dang_hoc'),
+(4, 'Phạm Thu Trang', '1C', 4, 7, 8, 'dang_hoc'),
+(5, 'Hoàng Gia Huy', '4A', 5, 9, 10, 'dang_hoc'),
+(6, 'Vũ Mai Anh', '2A', 6, 11, 12, 'dang_hoc'),
+(7, 'Đỗ Tuấn Kiệt', '5B', 7, 13, 14, 'dang_hoc'),
+(8, 'Bùi Ngọc Hà', '1B', 8, 15, 16, 'dang_hoc'),
+(9, 'Nguyễn Văn Nam', '3B', 9, 17, 18, 'dang_hoc'),
+(10, 'Trần Thị My', '4C', 10, 19, 20, 'dang_hoc');
 
 -- --------------------------------------------------------
 
@@ -3952,3 +3952,7 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+ALTER TABLE TaiXe
+ADD COLUMN kinh_nghiem INT DEFAULT 5;
+-- thêm cột kinh nghiệm cho tài xế
