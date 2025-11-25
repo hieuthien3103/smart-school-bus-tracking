@@ -8,9 +8,12 @@ class Student {
         hs.ma_hs,
         hs.ho_ten,
         hs.lop,
+        hs.trang_thai,
         hs.ma_phu_huynh,
         ph.ho_ten AS ten_phu_huynh,
         ph.so_dien_thoai AS sdt_phu_huynh,
+        hs.ma_diem_don,
+        hs.ma_diem_tra,
         td.ten_tram AS tram_don,
         tt.ten_tram AS tram_tra
       FROM hocsinh hs
@@ -42,23 +45,23 @@ class Student {
 
   // Thêm học sinh mới
   static async create(data) {
-    const { ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra } = data;
+    const { ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra, trang_thai } = data;
     const [result] = await db.execute(`
-      INSERT INTO hocsinh (ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra)
-      VALUES (?, ?, ?, ?, ?)
-    `, [ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra]);
+      INSERT INTO hocsinh (ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra, trang_thai)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra, trang_thai || 'dang_hoc']);
 
     return { ma_hs: result.insertId, ...data };
   }
 
   // Cập nhật thông tin học sinh
   static async update(ma_hs, data) {
-    const { ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra } = data;
+    const { ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra, trang_thai } = data;
     await db.execute(`
       UPDATE hocsinh 
-      SET ho_ten = ?, lop = ?, ma_phu_huynh = ?, ma_diem_don = ?, ma_diem_tra = ?
+      SET ho_ten = ?, lop = ?, ma_phu_huynh = ?, ma_diem_don = ?, ma_diem_tra = ?, trang_thai = ?
       WHERE ma_hs = ?
-    `, [ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra, ma_hs]);
+    `, [ho_ten, lop, ma_phu_huynh, ma_diem_don, ma_diem_tra, trang_thai, ma_hs]);
 
     return { ma_hs, ...data };
   }
