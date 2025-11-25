@@ -62,7 +62,9 @@ export interface Driver {
   tai_khoan: string;
   mat_khau: string;
   ma_ql: number | null;
-  
+  kinh_nghiem: string | null; 
+  tuyen_hien_tai: string | null;
+  xe_hien_tai: string | null; 
   // Relations
   quan_ly?: DriverManager;
 }
