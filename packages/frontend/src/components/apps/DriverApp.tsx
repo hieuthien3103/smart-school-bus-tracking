@@ -36,15 +36,15 @@ export const DriverApp: React.FC<DriverAppProps> = ({ user, onLogout }) => {
   // Map backend fields to legacy driverData props for DriverDashboard compatibility
   const driverData = {
     id: currentDriver?.ma_tai_xe || 1,
-    name: currentDriver?.ho_ten || user.ten,
+    name: currentDriver?.ho_ten || user.ten || 'Tài xế',
     busId: currentBus?.ma_xe || 1,
     route: routeName,
-    license: currentDriver?.so_gplx,
-    phone: currentDriver?.so_dien_thoai,
+    license: currentDriver?.so_gplx || '',
+    phone: currentDriver?.so_dien_thoai || '',
     experience: undefined,
     avatar: undefined
   };
-
+console.log('driverData:', driverData);
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">

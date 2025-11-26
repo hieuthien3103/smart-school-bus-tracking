@@ -1,5 +1,5 @@
-// Main App Component - Clean architecture with role-based app components
 import Login from './components/auth/Login';
+// Main App Component - Clean architecture with role-based app components
 import { AdminApp } from './components/apps/AdminApp';
 import { ParentApp } from './components/apps/ParentApp';
 import { DriverApp } from './components/apps/DriverApp';
@@ -11,17 +11,18 @@ import { StopsProvider } from './contexts/StopsContext';
 import { ParentsProvider } from './contexts/ParentsContext';
 import { RoutesProvider } from './contexts/RoutesContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
-import { useAuth } from './hooks';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 
 
-const App = () => {
-  // Authentication using custom hook
+const AppContent = () => {
+  // Authentication using custom hook (now inside AuthProvider)
   const { user, login, logout, isAuthenticated } = useAuth();
 
   // Handle login with actual username/password validation
   const handleLogin = async (username: string, password: string) => {
     console.log('Login attempt:', { username, password });
-    const result = await login(username, password);
+    const result = await login({ username, password });
     console.log('Login result:', result, 'User:', user);
     return result;
   };
@@ -62,7 +63,7 @@ const App = () => {
               <SchedulesProvider>
                 <RoutesProvider>
                   <NotificationsProvider>
-                  {renderApp()}
+                    {renderApp()}
                   </NotificationsProvider>
                 </RoutesProvider>
               </SchedulesProvider>
@@ -73,5 +74,11 @@ const App = () => {
     </ParentsProvider>
   );
 };
+
+const App = () => (
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
+);
 
 export default App;

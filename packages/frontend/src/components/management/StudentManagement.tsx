@@ -12,16 +12,19 @@ const StudentManagement: React.FC = () => {
     parents,
     parentsLoading,
     parentsError,
+    stops,
+    stopsLoading,
+    stopsError,
     fetchStudents,
+    fetchParents,
+    fetchStops,
     addStudent,
     updateStudent,
     deleteStudent,
-    fetchParents,
   } = useStudentsContext();
 
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any | null>(null);
-  const [defaultParent, setDefaultParent] = useState<string>('');
 
   // Build parents options (string values for Form)
   const parentsOptions = useMemo(
@@ -33,21 +36,21 @@ const StudentManagement: React.FC = () => {
     [parents]
   );
 
-  // Build stops options from students (if tram info present) OR empty — ideally you have a StopsContext or service
+  // Build stops options from context
   const stopsOptions = useMemo(() => {
-    // collect unique stops from students' tram_don/tram_tra (fallback)
-    const setMap = new Map<string, string>();
-    (students || []).forEach((s: any) => {
-      if (s.tram_don) setMap.set(String(s.tram_don), s.tram_don);
-      if (s.tram_tra) setMap.set(String(s.tram_tra), s.tram_tra);
-    });
-    return Array.from(setMap.entries()).map(([k, v]) => ({ value: String(k), label: String(v) }));
-  }, [students]);
+    return (stops || []).map((stop: any) => ({
+      value: String(stop.ma_tram ?? stop.id ?? ''),
+      label: `${stop.ten_tram ?? stop.name ?? '—'} ${stop.dia_chi ? `(${stop.dia_chi})` : ''}`,
+    }));
+  }, [stops]);
 
   const openAdd = async () => {
-    // ensure parents loaded before opening create modal (so user can select)
+    // ensure parents and stops loaded before opening create modal
     if (!parents || parents.length === 0) {
       await fetchParents();
+    }
+    if (!stops || stops.length === 0) {
+      await fetchStops();
     }
     setEditingStudent(null);
     setShowModal(true);
@@ -57,13 +60,16 @@ const StudentManagement: React.FC = () => {
     if (!parents || parents.length === 0) {
       await fetchParents();
     }
+    if (!stops || stops.length === 0) {
+      await fetchStops();
+    }
     // prefill form values as strings for select controls
     setEditingStudent({
       ...s,
       ma_phu_huynh: s.ma_phu_huynh != null ? String(s.ma_phu_huynh) : '',
       ma_diem_don: s.ma_diem_don != null ? String(s.ma_diem_don) : '',
       ma_diem_tra: s.ma_diem_tra != null ? String(s.ma_diem_tra) : '',
-      trang_thai: s.trang_thai ?? 'hoat_dong',
+      trang_thai: s.trang_thai ?? 'dang_hoc',
     });
     setShowModal(true);
   };
@@ -75,34 +81,44 @@ const StudentManagement: React.FC = () => {
 
   const handleSubmit = async (data: any) => {
     try {
-      // Require ma_phu_huynh when editing
-      if (editingStudent) {
-        if (!data.ma_phu_huynh || String(data.ma_phu_huynh).trim() === '') {
-          alert('Vui lòng chọn phụ huynh khi chỉnh sửa học sinh.');
-          return;
-        }
+      // Validate required fields
+      if (!data.ho_ten || !data.ho_ten.trim()) {
+        alert('Vui lòng nhập tên học sinh!');
+        return;
       }
-      const ma_phu_huynh_value =
-        data.ma_phu_huynh && String(data.ma_phu_huynh).trim() !== ''
-          ? Number(data.ma_phu_huynh)
-          : defaultParent
-          ? Number(defaultParent)
-          : null;
+      if (!data.lop || !data.lop.trim()) {
+        alert('Vui lòng nhập lớp!');
+        return;
+      }
+      if (!data.ma_phu_huynh || String(data.ma_phu_huynh).trim() === '') {
+        alert('Vui lòng chọn phụ huynh!');
+        return;
+      }
+      if (!data.ma_diem_don || String(data.ma_diem_don).trim() === '') {
+        alert('Vui lòng chọn trạm đón!');
+        return;
+      }
+      if (!data.ma_diem_tra || String(data.ma_diem_tra).trim() === '') {
+        alert('Vui lòng chọn trạm trả!');
+        return;
+      }
 
       const payload = {
-        ho_ten: data.ho_ten,
-        lop: data.lop,
-        ma_phu_huynh: ma_phu_huynh_value,
-        ma_diem_don: data.ma_diem_don ? Number(data.ma_diem_don) : null,
-        ma_diem_tra: data.ma_diem_tra ? Number(data.ma_diem_tra) : null,
-        trang_thai: data.trang_thai ?? 'hoat_dong',
+        ho_ten: data.ho_ten.trim(),
+        lop: data.lop.trim(),
+        ma_phu_huynh: Number(data.ma_phu_huynh),
+        ma_diem_don: Number(data.ma_diem_don),
+        ma_diem_tra: Number(data.ma_diem_tra),
+        trang_thai: data.trang_thai ?? 'dang_hoc',
       };
 
       if (editingStudent && (editingStudent.ma_hs ?? editingStudent.id)) {
         const id = editingStudent.ma_hs ?? editingStudent.id;
         await updateStudent(Number(id), payload);
+        alert('Cập nhật học sinh thành công!');
       } else {
         await addStudent(payload);
+        alert('Thêm học sinh thành công!');
       }
 
       await fetchStudents();
@@ -115,9 +131,10 @@ const StudentManagement: React.FC = () => {
 
   const handleDelete = async (id?: number) => {
     if (!id) return;
-    if (!confirm('Bạn có chắc chắn muốn xóa?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa học sinh này?')) return;
     try {
       await deleteStudent(id);
+      alert('Xóa học sinh thành công!');
       await fetchStudents();
     } catch (err: any) {
       console.error('Delete error', err);
@@ -125,41 +142,82 @@ const StudentManagement: React.FC = () => {
     }
   };
 
-  // Build form fields (Form expects option.value string)
-  const formFieldsBase = [
-    { name: 'ho_ten', type: 'text', placeholder: 'Tên học sinh', required: true },
-    { name: 'lop', type: 'text', placeholder: 'Lớp', required: true },
-    { name: 'ma_phu_huynh', type: 'select', placeholder: 'Chọn phụ huynh', options: parentsOptions, required: true },
-    { name: 'ma_diem_don', type: 'select', placeholder: 'Chọn trạm đón', options: stopsOptions, required: true },
-    { name: 'ma_diem_tra', type: 'select', placeholder: 'Chọn trạm trả', options: stopsOptions, required: true },
-    { name: 'trang_thai', type: 'select', options: [{ value: 'hoat_dong', label: 'Hoạt động' }, { value: 'nghi', label: 'Nghỉ' }], required: true },
-  ];
-
-  // attach defaultValue from editingStudent
-  const formFields = formFieldsBase.map((f) => {
-    const defaultValue = editingStudent ? (editingStudent as any)[f.name] ?? '' : '';
-    return { ...f, defaultValue };
-  });
+  // Build form fields with labels and proper defaultValues
+  const formFields = useMemo(() => {
+    return [
+      { 
+        name: 'ho_ten', 
+        label: 'Họ tên',
+        type: 'text' as const, 
+        placeholder: 'VD: Nguyễn Văn A', 
+        required: true,
+        defaultValue: editingStudent?.ho_ten ?? ''
+      },
+      { 
+        name: 'lop', 
+        label: 'Lớp',
+        type: 'text' as const, 
+        placeholder: 'VD: 6A, 7B', 
+        required: true,
+        defaultValue: editingStudent?.lop ?? ''
+      },
+      { 
+        name: 'ma_phu_huynh', 
+        label: 'Phụ huynh',
+        type: 'select' as const, 
+        placeholder: 'Chọn phụ huynh', 
+        options: parentsOptions, 
+        required: true,
+        defaultValue: editingStudent?.ma_phu_huynh ?? ''
+      },
+      { 
+        name: 'ma_diem_don', 
+        label: 'Trạm đón',
+        type: 'select' as const, 
+        placeholder: 'Chọn trạm đón', 
+        options: stopsOptions, 
+        required: true,
+        defaultValue: editingStudent?.ma_diem_don ?? ''
+      },
+      { 
+        name: 'ma_diem_tra', 
+        label: 'Trạm trả',
+        type: 'select' as const, 
+        placeholder: 'Chọn trạm trả', 
+        options: stopsOptions, 
+        required: true,
+        defaultValue: editingStudent?.ma_diem_tra ?? ''
+      },
+      { 
+        name: 'trang_thai', 
+        label: 'Trạng thái',
+        type: 'select' as const, 
+        placeholder: 'Chọn trạng thái',
+        options: [
+          { value: 'dang_hoc', label: '✅ Đang học' }, 
+          { value: 'nghi_hoc', label: '⏸️ Nghỉ học' },
+          { value: 'chuyen_truong', label: '🔄 Chuyển trường' },
+          { value: 'tot_nghiep', label: '🎓 Tốt nghiệp' }
+        ], 
+        required: true,
+        defaultValue: editingStudent?.trang_thai ?? 'dang_hoc'
+      },
+    ];
+  }, [editingStudent, parentsOptions, stopsOptions]);
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-3xl font-bold">Quản lý Học sinh</h1>
-          <div className="mt-2 text-sm text-gray-600">
-            Gán phụ huynh mặc định:{" "}
-            <select value={defaultParent} onChange={(e) => setDefaultParent(e.target.value)} className="ml-2 p-1 border rounded">
-              <option value="">— Không gán —</option>
-              {parentsOptions.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Tổng số: {students.length} học sinh
+            {parentsLoading && ' | Đang tải phụ huynh...'}
+            {stopsLoading && ' | Đang tải trạm...'}
+          </p>
         </div>
         <div>
-          <button onClick={openAdd} className="bg-blue-600 text-white px-4 py-2 rounded">
+          <button onClick={openAdd} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
             <Plus className="inline-block mr-2 h-4 w-4" /> Thêm học sinh
           </button>
         </div>
@@ -175,13 +233,13 @@ const StudentManagement: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-4 py-2 text-left">ID</th>
-                  <th className="px-4 py-2 text-left">Tên</th>
-                  <th className="px-4 py-2 text-left">Lớp</th>
-                  <th className="px-4 py-2 text-left">Phụ huynh</th>
-                  <th className="px-4 py-2 text-left">Tuyến</th>
-                  <th className="px-4 py-2 text-left">Trạng thái</th>
-                  <th className="px-4 py-2 text-left">Thao tác</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phụ huynh</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm đón/trả</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -192,31 +250,66 @@ const StudentManagement: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  students.map((s: any) => (
-                    <tr key={s.ma_hs ?? s.id} className="border-t">
-                      <td className="px-4 py-2">{s.ma_hs}</td>
-                      <td className="px-4 py-2 font-medium">{s.ho_ten}</td>
-                      <td className="px-4 py-2">{s.lop ?? '-'}</td>
-                      <td className="px-4 py-2">
-                        {s.parent_label ?? '-'}
-                        {s.parent_phone ? <div className="text-xs text-gray-500">{s.parent_phone}</div> : null}
-                      </td>
-                      <td className="px-4 py-2">
-                        {s.tram_don || s.tram_tra ? `${s.tram_don ?? '-'} → ${s.tram_tra ?? '-'}` : "-"}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-1 text-xs rounded ${s.trang_thai === 'hoat_dong' ? 'bg-blue-100 text-blue-800' : s.trang_thai === 'nghi' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-                          {s.trang_thai === 'hoat_dong' ? 'Hoạt động' : s.trang_thai === 'nghi' ? 'Nghỉ' : (s.trang_thai ?? '-')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex space-x-2">
-                          <button onClick={() => openEdit(s)} className="text-blue-600"> <Edit className="h-4 w-4" /> </button>
-                          <button onClick={() => handleDelete(s.ma_hs ?? s.id)} className="text-red-600"> <Trash2 className="h-4 w-4" /> </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  students.map((s: any) => {
+                    // Find parent info
+                    const parent = parents.find((p: any) => p.ma_phu_huynh === s.ma_phu_huynh);
+                    // Find stop info
+                    const stopDon = stops.find((st: any) => st.ma_tram === s.ma_diem_don);
+                    const stopTra = stops.find((st: any) => st.ma_tram === s.ma_diem_tra);
+                    
+                    return (
+                      <tr key={s.ma_hs ?? s.id} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-2">{s.ma_hs}</td>
+                        <td className="px-4 py-2 font-medium">{s.ho_ten}</td>
+                        <td className="px-4 py-2">{s.lop ?? '-'}</td>
+                        <td className="px-4 py-2">
+                          {parent ? (
+                            <>
+                              <div>{parent.ho_ten}</div>
+                              <div className="text-xs text-gray-500">{parent.so_dien_thoai}</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {stopDon || stopTra ? (
+                            <div className="text-sm">
+                              <div>Đón: {stopDon?.ten_tram ?? '-'}</div>
+                              <div>Trả: {stopTra?.ten_tram ?? '-'}</div>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className={`px-2 py-1 text-xs rounded font-medium ${
+                            s.trang_thai === 'dang_hoc' ? 'bg-green-100 text-green-800' : 
+                            s.trang_thai === 'nghi_hoc' ? 'bg-yellow-100 text-yellow-800' : 
+                            s.trang_thai === 'chuyen_truong' ? 'bg-blue-100 text-blue-800' : 
+                            s.trang_thai === 'tot_nghiep' ? 'bg-purple-100 text-purple-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {s.trang_thai === 'dang_hoc' ? '✅ Đang học' : 
+                             s.trang_thai === 'nghi_hoc' ? '⏸️ Nghỉ học' : 
+                             s.trang_thai === 'chuyen_truong' ? '🔄 Chuyển trường' : 
+                             s.trang_thai === 'tot_nghiep' ? '🎓 Tốt nghiệp' : 
+                             s.trang_thai ?? '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2">
+                          <div className="flex space-x-2">
+                            <button onClick={() => openEdit(s)} className="text-blue-600 hover:text-blue-800" title="Sửa"> 
+                              <Edit className="h-4 w-4" /> 
+                            </button>
+                            <button onClick={() => handleDelete(s.ma_hs ?? s.id)} className="text-red-600 hover:text-red-800" title="Xóa"> 
+                              <Trash2 className="h-4 w-4" /> 
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
