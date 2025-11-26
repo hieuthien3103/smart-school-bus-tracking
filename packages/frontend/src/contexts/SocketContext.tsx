@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { API_CONFIG } from '../services/api/config';
@@ -54,6 +54,7 @@ interface SocketContextType {
   sendStatusUpdate: (data: Omit<StatusUpdate, 'timestamp'>) => void;
   sendEmergencyAlert: (data: Omit<EmergencyAlert, 'id' | 'timestamp'>) => void;
   sendAttendanceUpdate: (data: Omit<AttendanceUpdate, 'timestamp'>) => void;
+  emit: (event: string, data: any) => void; // Generic emit method
   
   // Event listeners
   onLocationUpdate: (callback: (data: LocationUpdate) => void) => void;
@@ -135,14 +136,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
   }, [autoConnect]);
 
   // Socket methods
-  const joinRoom = (roomData: RoomData) => {
+  const joinRoom = useCallback((roomData: RoomData) => {
     if (socket && isConnected) {
       socket.emit('joinRoom', roomData);
       console.log('📡 Joining room:', roomData);
     } else {
       console.warn('⚠️ Socket not connected, cannot join room');
+      // Retry joining room when socket connects
+      if (socket) {
+        socket.once('connect', () => {
+          socket.emit('joinRoom', roomData);
+          console.log('📡 Retried joining room after connection:', roomData);
+        });
+      }
     }
-  };
+  }, [socket, isConnected]);
 
   const sendLocationUpdate = (data: Omit<LocationUpdate, 'timestamp'>) => {
     if (socket && isConnected) {
@@ -193,6 +201,14 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
       console.log('✅ Sent attendance update:', attendanceData);
     } else {
       console.warn('⚠️ Socket not connected, cannot send attendance update');
+    }
+  };
+
+  const emit = (event: string, data: any) => {
+    if (socket && isConnected) {
+      socket.emit(event, data);
+    } else {
+      console.warn(`⚠️ Socket not connected, cannot emit event: ${event}`);
     }
   };
 
@@ -259,6 +275,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
     sendStatusUpdate,
     sendEmergencyAlert,
     sendAttendanceUpdate,
+    emit,
     onLocationUpdate,
     onStatusUpdate,
     onEmergencyAlert,

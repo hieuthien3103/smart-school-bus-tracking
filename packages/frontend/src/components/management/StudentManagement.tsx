@@ -275,8 +275,8 @@ const StudentManagement: React.FC = () => {
                         <td className="px-4 py-2">
                           {stopDon || stopTra ? (
                             <div className="text-sm">
-                              <div>Đón: {stopDon?.ten_tram ?? '-'}</div>
-                              <div>Trả: {stopTra?.ten_tram ?? '-'}</div>
+                              <div>Đón: {stopDon ? `${stopDon.ten_tram} (${stopDon.dia_chi})` : '-'}</div>
+                              <div>Trả: {stopTra ? `${stopTra.ten_tram} (${stopTra.dia_chi})` : '-'}</div>
                             </div>
                           ) : (
                             '-'

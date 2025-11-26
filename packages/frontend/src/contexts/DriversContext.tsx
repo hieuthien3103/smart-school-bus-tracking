@@ -15,30 +15,54 @@ const DriversContext = createContext<DriversContextType | undefined>(undefined);
 
 export const DriversProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const fetchDrivers = useCallback(async () => {
-  const data = await driverService.getDrivers();
-  setDrivers(data);
-  }, []);
+    if (isFetching) return; // Prevent concurrent fetches
+    
+    setIsFetching(true);
+    try {
+      const data = await driverService.getDrivers();
+      setDrivers(data);
+    } catch (err: any) {
+      console.error('DriversProvider.fetchDrivers error', err);
+      // Don't clear drivers on error, keep existing data
+      if (err?.response?.status === 429) {
+        console.warn('Rate limited, will retry later');
+      }
+    } finally {
+      setIsFetching(false);
+    }
+  }, [isFetching]);
 
   const addDriver = useCallback(async (driver: Omit<Driver, 'ma_tai_xe'>) => {
     await driverService.createDriver(driver);
-    await fetchDrivers();
+    // Debounce refetch
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    fetchTimeoutRef.current = setTimeout(() => fetchDrivers(), 500);
   }, [fetchDrivers]);
 
   const updateDriver = useCallback(async (ma_tai_xe: number, driver: Partial<Driver>) => {
     await driverService.updateDriver(ma_tai_xe, driver);
-    await fetchDrivers();
+    // Debounce refetch
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    fetchTimeoutRef.current = setTimeout(() => fetchDrivers(), 500);
   }, [fetchDrivers]);
 
   const deleteDriver = useCallback(async (ma_tai_xe: number) => {
     await driverService.deleteDriver(ma_tai_xe);
-    await fetchDrivers();
+    // Debounce refetch
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    fetchTimeoutRef.current = setTimeout(() => fetchDrivers(), 500);
   }, [fetchDrivers]);
 
   useEffect(() => {
     fetchDrivers();
-  }, [fetchDrivers]);
+    return () => {
+      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    };
+  }, []); // Only fetch once on mount
 
   return (
     <DriversContext.Provider value={{ drivers, fetchDrivers, addDriver, updateDriver, deleteDriver }}>

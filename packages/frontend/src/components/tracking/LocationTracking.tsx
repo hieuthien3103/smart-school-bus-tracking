@@ -1,5 +1,6 @@
 // Refactored LocationTracking component using new useBusTracking hook + socket integration
-import { useState, useCallback, memo, useEffect } from "react";import {
+import { useState, useCallback, memo, useEffect } from "react";
+import {
   MapPin,
   RefreshCw,
   Filter,
@@ -14,10 +15,14 @@ import BusCard from "./BusCard";
 import { FilterButtons } from "./FilterButtons";
 import SearchBox from "./SearchBox";
 import BusDetailPanel from "./BusDetailPanel";
+import MapViews from "../map/MapViews";
 // removed useSchedules import because SchedulesContext doesn't expose schedulesData
 import { useSocket } from "../../contexts/SocketContext";
+import { useAutoLocationUpdate } from "../../hooks/useAutoLocationUpdate";
 
 const LocationTracking = () => {
+  // Enable auto location updates every 5 seconds
+  useAutoLocationUpdate(true, 5000);
   // Use custom hook for all bus tracking logic
   const {
     buses,
@@ -105,6 +110,18 @@ const LocationTracking = () => {
         const found = (buses ?? []).find((b: any) => b.id === busId) ?? null;
         return found;
       });
+    },
+    [buses, setSelectedBus]
+  );
+
+  // Handle bus click from map marker
+  const handleMapBusClick = useCallback(
+    (bus: any) => {
+      // Find the corresponding NormalizedBus from buses array
+      const found = (buses ?? []).find((b: any) => b.ma_xe === bus.ma_xe || b.id === bus.ma_xe) ?? null;
+      if (found) {
+        setSelectedBus(found);
+      }
     },
     [buses, setSelectedBus]
   );
@@ -255,31 +272,7 @@ const LocationTracking = () => {
 
             <div className="p-4">
               {viewMode === "map" ? (
-                // Placeholder map view (integrate real map library as needed)
-                <div className="relative bg-gradient-to-br from-blue-50 to-green-50 h-96 rounded-lg border-2 border-dashed border-gray-300">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">Chế độ xem bản đồ</p>
-                      <p className="text-gray-400 text-sm">Tích hợp Google Maps/OpenStreetMap</p>
-                    </div>
-                  </div>
-
-                  {/* Simulated markers based on normalized buses */}
-                  {markers.map((m, idx) => (
-                    <div
-                      key={`marker-${m.id}`}
-                      className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer transform transition-all hover:scale-110 bg-blue-500 ${
-                        selectedBus?.id === m.id ? "ring-4 ring-white ring-opacity-60 scale-125" : ""
-                      }`}
-                      style={{ left: `${10 + (idx % 10) * 8}%`, top: `${20 + ((idx % 5) * 12)}%` }}
-                      onClick={() => handleBusSelect(m.id)}
-                      title={`${m.label}`}
-                    >
-                      <BusIcon className="w-3 h-3 text-white" />
-                    </div>
-                  ))}
-                </div>
+                <MapViews height="600px" onBusClick={handleMapBusClick} />
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {filteredBuses.length > 0 ? (

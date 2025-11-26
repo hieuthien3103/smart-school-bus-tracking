@@ -13,10 +13,14 @@ import {
   Activity
 } from 'lucide-react';
 import { useBuses } from '../../contexts/BusesContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { useAutoLocationUpdate } from '../../hooks/useAutoLocationUpdate';
+import MapViews from '../map/MapViews';
 import { useSchedules } from '../../contexts/SchedulesContext';
 import { useStudents } from '../../contexts/StudentsContext';
 import busService from '../../services/api/busService';
 import pickupDropoffService from '../../services/api/pickupDropoffService';
+import { scheduleService } from '../../services/api/scheduleService';
 
 interface DriverDashboardProps {
   driverData: {
@@ -51,6 +55,10 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
   const { buses } = useBuses();
   const { schedules } = useSchedules();
   const { students } = useStudents();
+  const { onLocationUpdate, offLocationUpdate } = useSocket();
+  
+  // Enable auto location updates for bus movement
+  useAutoLocationUpdate(true, 5000);
 
   // ==================== STATE ====================
   const [tripMode, setTripMode] = useState<TripMode>('pickup');
@@ -88,11 +96,161 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
   // Find today's schedule for this driver
   const currentSchedule = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return schedules.find((schedule: Schedule) => 
+    
+    console.log('[DriverDashboard] Finding schedule for driver:', {
+      driverId: driverData.id,
+      today,
+      totalSchedules: schedules.length,
+      schedules: schedules.map((s: Schedule) => ({
+        ma_lich: s.ma_lich,
+        ma_tai_xe: s.ma_tai_xe,
+        ngay_chay: s.ngay_chay,
+        ma_xe: s.ma_xe
+      }))
+    });
+    
+    // Priority 1: Find schedule for today with matching driver
+    let schedule = schedules.find((schedule: Schedule) => 
       schedule.ma_tai_xe === driverData.id && 
       schedule.ngay_chay === today
     );
-  }, [schedules, driverData.id]);
+    
+    if (schedule) {
+      console.log('[DriverDashboard] Found schedule for today:', schedule);
+      return schedule;
+    }
+    
+    // Priority 2: Find any schedule for this driver (not just today)
+    schedule = schedules.find((schedule: Schedule) => 
+      schedule.ma_tai_xe === driverData.id
+    );
+    
+    if (schedule) {
+      console.log('[DriverDashboard] Found schedule for driver (any date):', schedule);
+      return schedule;
+    }
+    
+    // Priority 3: Find schedule by bus (ma_xe) if currentBus exists
+    if (currentBus) {
+      schedule = schedules.find((schedule: Schedule) => 
+        schedule.ma_xe === currentBus.ma_xe
+      );
+      
+      if (schedule) {
+        console.log('[DriverDashboard] Found schedule by bus:', schedule);
+        return schedule;
+      }
+    }
+    
+    // Priority 4: Find any schedule for today (fallback)
+    schedule = schedules.find((schedule: Schedule) => 
+      schedule.ngay_chay === today
+    );
+    
+    if (schedule) {
+      console.log('[DriverDashboard] Found any schedule for today (fallback):', schedule);
+      return schedule;
+    }
+    
+    // Priority 5: Get first available schedule (last resort)
+    if (schedules.length > 0) {
+      console.log('[DriverDashboard] Using first available schedule (last resort):', schedules[0]);
+      return schedules[0];
+    }
+    
+    console.warn('[DriverDashboard] No schedule found');
+    return undefined;
+  }, [schedules, driverData.id, currentBus]);
+  
+  // Fetch schedule detail with phan_cong if needed
+  const [scheduleDetail, setScheduleDetail] = useState<Schedule | null>(null);
+  const [phanCongList, setPhanCongList] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (!currentSchedule?.ma_lich) {
+      setScheduleDetail(null);
+      setPhanCongList([]);
+      return;
+    }
+    
+    // Fetch schedule detail to get phan_cong relations
+    const fetchScheduleDetail = async () => {
+      try {
+        const response = await scheduleService.getScheduleById(currentSchedule.ma_lich);
+        console.log('[DriverDashboard] Schedule detail:', response);
+        setScheduleDetail(response);
+        
+        // If phan_cong is in response, use it
+        if (response.phan_cong && Array.isArray(response.phan_cong)) {
+          setPhanCongList(response.phan_cong);
+        }
+      } catch (error) {
+        console.error('[DriverDashboard] Error fetching schedule detail:', error);
+        setScheduleDetail(currentSchedule); // Fallback to currentSchedule
+      }
+    };
+    
+    // Also try to fetch phan_cong from assignments endpoint or schedule students
+    const fetchPhanCong = async () => {
+      try {
+        const { apiClient } = await import('../../services/api/client');
+        
+        // Try to get students from schedule endpoint (which may include phan_cong info)
+        try {
+          const studentsResponse = await apiClient.get(`/lichtrinh/${currentSchedule.ma_lich}/students`);
+          const studentsPayload = studentsResponse.data as any;
+          const scheduleStudents = Array.isArray(studentsPayload) ? studentsPayload : (studentsPayload?.data ?? []);
+          console.log('[DriverDashboard] Students from schedule endpoint:', scheduleStudents);
+          
+          // Convert students to phan_cong format if needed
+          if (scheduleStudents.length > 0) {
+            const assignments = scheduleStudents.map((student: any) => ({
+              ma_pc: student.ma_pc || null,
+              ma_lich: currentSchedule.ma_lich,
+              ma_hs: student.ma_hs || student.ma_hoc_sinh,
+              hoc_sinh: student
+            }));
+            setPhanCongList(assignments);
+            return;
+          }
+        } catch (studentsError) {
+          console.log('[DriverDashboard] Could not fetch students from schedule endpoint:', studentsError);
+        }
+        
+        // Fallback: Try phancong endpoint
+        try {
+          const response = await apiClient.get(`/phancong/lich/${currentSchedule.ma_lich}`);
+          const payload = response.data as any;
+          const assignments = Array.isArray(payload) ? payload : (payload?.data ?? []);
+          console.log('[DriverDashboard] Phan cong from API:', assignments);
+          if (assignments.length > 0) {
+            setPhanCongList(assignments);
+          }
+        } catch (phancongError) {
+          console.log('[DriverDashboard] Could not fetch phan_cong from endpoint:', phancongError);
+        }
+      } catch (error) {
+        console.error('[DriverDashboard] Error fetching phan_cong:', error);
+      }
+    };
+    
+    fetchScheduleDetail();
+    fetchPhanCong();
+  }, [currentSchedule?.ma_lich]);
+  
+  // Use scheduleDetail if available, otherwise use currentSchedule
+  // If we have phanCongList, merge it into schedule
+  const scheduleWithPhanCong = useMemo(() => {
+    const schedule = scheduleDetail || currentSchedule;
+    if (!schedule) return null;
+    
+    // If we have phanCongList but schedule doesn't have phan_cong, add it
+    if (phanCongList.length > 0 && (!schedule.phan_cong || schedule.phan_cong.length === 0)) {
+      return { ...schedule, phan_cong: phanCongList };
+    }
+    
+    return schedule;
+  }, [scheduleDetail, currentSchedule, phanCongList]);
 
   // ==================== FETCH BUS LOCATION ====================
   useEffect(() => {
@@ -103,8 +261,8 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
         // busService.getBusLocation returns BusLocation[] (may contain multiple samples)
         const locations = await busService.getBusLocation(currentBus.ma_xe);
         if (Array.isArray(locations) && locations.length > 0) {
-          // pick the most recent (assume first or last depending on backend; choose last)
-          const latest = locations[locations.length - 1];
+          // pick the most recent (assume first or last depending on backend; choose first as it's typically sorted DESC)
+          const latest = locations[0];
           setBusLocation({
             latitude: latest.vi_do ?? 21.0285,
             longitude: latest.kinh_do ?? 105.8542,
@@ -125,9 +283,40 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     return () => clearInterval(interval);
   }, [currentBus?.ma_xe]);
 
+  // Listen to real-time location updates from socket
+  useEffect(() => {
+    if (!currentBus?.ma_xe) return;
+
+    const handleLocationUpdate = (payload: any) => {
+      const busId = payload.ma_xe ?? payload.busId;
+      if (busId !== currentBus.ma_xe) return;
+
+      const busLat = payload.vi_do ?? payload.latitude;
+      const busLng = payload.kinh_do ?? payload.longitude;
+      const speed = payload.toc_do ?? payload.speed ?? 0;
+
+      if (busLat != null && busLng != null) {
+        setBusLocation({
+          latitude: Number(busLat),
+          longitude: Number(busLng),
+          speed: Number(speed)
+        });
+        setBusStatus(prev => ({
+          ...prev,
+          speed: Number(speed)
+        }));
+      }
+    };
+
+    onLocationUpdate(handleLocationUpdate);
+    return () => {
+      offLocationUpdate(handleLocationUpdate);
+    };
+  }, [currentBus?.ma_xe, onLocationUpdate, offLocationUpdate]);
+
   // ==================== FETCH PICKUP/DROPOFF LOGS ====================
   useEffect(() => {
-    if (!currentSchedule?.ma_lich) {
+    if (!scheduleWithPhanCong?.ma_lich) {
       setPickupDropoffLogs([]);
       return;
     }
@@ -137,7 +326,7 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
       setErrorLogs(null);
       
       try {
-        const response = await pickupDropoffService.getLogsBySchedule(currentSchedule.ma_lich);
+        const response = await pickupDropoffService.getLogsBySchedule(scheduleWithPhanCong.ma_lich);
         if (response.success && response.data) {
           setPickupDropoffLogs(response.data);
         } else {
@@ -154,17 +343,154 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
     };
 
     fetchLogs();
-  }, [currentSchedule?.ma_lich]);
+  }, [scheduleWithPhanCong?.ma_lich]);
+
+  // Fetch students from schedule endpoint
+  const [scheduleStudents, setScheduleStudents] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (!scheduleWithPhanCong?.ma_lich) {
+      setScheduleStudents([]);
+      return;
+    }
+    
+    const fetchScheduleStudents = async () => {
+      try {
+        const { apiClient } = await import('../../services/api/client');
+        const response = await apiClient.get(`/lichtrinh/${scheduleWithPhanCong.ma_lich}/students`);
+        const payload = response.data as any;
+        const studentsList = Array.isArray(payload) ? payload : (payload?.data ?? []);
+        console.log('[DriverDashboard] Students from schedule endpoint:', studentsList);
+        setScheduleStudents(studentsList);
+      } catch (error) {
+        console.error('[DriverDashboard] Error fetching schedule students:', error);
+        setScheduleStudents([]);
+      }
+    };
+    
+    fetchScheduleStudents();
+  }, [scheduleWithPhanCong?.ma_lich]);
 
   // ==================== CONVERT STUDENTS DATA ====================
   const localStudents = useMemo(() => {
-    if (!currentSchedule) return [];
+    if (!scheduleWithPhanCong) {
+      console.log('[DriverDashboard] No schedule found');
+      return [];
+    }
 
-    // Filter students assigned to this schedule
-    const assignedStudents = students.filter((student: Student) => {
-      // Check if student has valid pickup/dropoff points
-      return student.ma_diem_don && student.ma_diem_tra;
-    });
+    console.log('[DriverDashboard] Processing students for schedule:', scheduleWithPhanCong.ma_lich);
+    console.log('[DriverDashboard] Schedule phan_cong:', scheduleWithPhanCong.phan_cong);
+    console.log('[DriverDashboard] Schedule students from API:', scheduleStudents);
+    console.log('[DriverDashboard] Available students:', students.length);
+
+    // Priority 1: Use students from schedule endpoint (most reliable)
+    let assignedStudents: Student[] = [];
+    
+    if (scheduleStudents.length > 0) {
+      // Map schedule students to full Student objects
+      const studentIds = scheduleStudents.map((s: any) => {
+        const id = s.ma_hs || s.ma_hoc_sinh;
+        console.log('[DriverDashboard] Student from API:', { id, name: s.ho_ten || s.ten_hoc_sinh, fullData: s });
+        return id;
+      }).filter(Boolean);
+      console.log('[DriverDashboard] Student IDs from schedule endpoint:', studentIds);
+      
+      // Try to find in students context first
+      assignedStudents = students.filter((student: Student) => {
+        const found = studentIds.includes(student.ma_hs);
+        if (found) {
+          console.log('[DriverDashboard] Found student in context:', student.ma_hs, student.ho_ten);
+        }
+        return found;
+      });
+      
+      console.log('[DriverDashboard] Found', assignedStudents.length, 'students in context out of', studentIds.length, 'from API');
+      
+      // If not all found in students context, use schedule students directly
+      if (assignedStudents.length < scheduleStudents.length) {
+        const missingStudentIds = studentIds.filter(id => 
+          !assignedStudents.find((as: Student) => as.ma_hs === id)
+        );
+        console.log('[DriverDashboard] Missing student IDs (not in context):', missingStudentIds);
+        
+        const missingStudents = scheduleStudents
+          .filter((s: any) => {
+            const id = s.ma_hs || s.ma_hoc_sinh;
+            return missingStudentIds.includes(id);
+          })
+          .map((s: any): Student => {
+            const id = s.ma_hs || s.ma_hoc_sinh;
+            console.log('[DriverDashboard] Creating student object from API data:', id, s);
+            return {
+              ma_hs: id,
+              ho_ten: s.ho_ten || s.ten_hoc_sinh || 'Chưa có tên',
+              lop: s.lop || '',
+              ma_phu_huynh: s.ma_phu_huynh || null,
+              ma_diem_don: s.ma_diem_don || null,
+              ma_diem_tra: s.ma_diem_tra || null,
+              trang_thai: 'hoat_dong' as const,
+              // Include any additional data from API
+              ...(s.ten_phu_huynh && { phu_huynh: { ho_ten: s.ten_phu_huynh, so_dien_thoai: s.sdt_phu_huynh } }),
+              phan_cong: s.phan_cong || []
+            } as Student;
+          });
+        assignedStudents = [...assignedStudents, ...missingStudents];
+        console.log('[DriverDashboard] Added', missingStudents.length, 'students from API data');
+      }
+      
+      console.log('[DriverDashboard] Total students found:', assignedStudents.length, 'from schedule endpoint');
+    }
+    
+    // Priority 2: Get students from schedule's phan_cong relation
+    if (assignedStudents.length === 0 && scheduleWithPhanCong.phan_cong && Array.isArray(scheduleWithPhanCong.phan_cong)) {
+      // Get students from schedule's phan_cong
+      const studentIds = scheduleWithPhanCong.phan_cong
+        .map((pc: any) => pc.ma_hs || pc.hoc_sinh?.ma_hs || (pc.hoc_sinh && typeof pc.hoc_sinh === 'object' ? pc.hoc_sinh.ma_hs : null))
+        .filter(Boolean);
+      
+      console.log('[DriverDashboard] Student IDs from phan_cong:', studentIds);
+      
+      assignedStudents = students.filter((student: Student) => 
+        studentIds.includes(student.ma_hs)
+      );
+      
+      console.log('[DriverDashboard] Found', assignedStudents.length, 'students from schedule.phan_cong');
+    }
+    
+    // Priority 2: If no students from schedule.phan_cong, try to find by student's phan_cong
+    if (assignedStudents.length === 0) {
+      assignedStudents = students.filter((student: Student) => {
+        // Check if student has valid pickup/dropoff points
+        if (!student.ma_diem_don || !student.ma_diem_tra) return false;
+        
+        // Check if student is assigned to this schedule via phan_cong
+        if (student.phan_cong && Array.isArray(student.phan_cong)) {
+          const hasThisSchedule = student.phan_cong.some((pc: any) => 
+            pc.ma_lich === scheduleWithPhanCong.ma_lich || pc.lich_trinh?.ma_lich === scheduleWithPhanCong.ma_lich
+          );
+          if (hasThisSchedule) return true;
+        }
+        
+        return false;
+      });
+      
+      console.log('[DriverDashboard] Found', assignedStudents.length, 'students from student.phan_cong');
+    }
+    
+    // Priority 3: Fallback - check if student's bus matches current bus
+    if (assignedStudents.length === 0 && currentBus) {
+      assignedStudents = students.filter((student: Student) => {
+        if (!student.ma_diem_don || !student.ma_diem_tra) return false;
+        
+        // Check if student's bus matches current bus
+        const studentBus = (student.diem_don as any)?.xe;
+        if (studentBus && studentBus.ma_xe === currentBus.ma_xe) return true;
+        
+        return false;
+      });
+      
+      console.log('[DriverDashboard] Found', assignedStudents.length, 'students from bus matching');
+    }
 
     // Convert to local format with status from logs
     return assignedStudents.map((student: Student): LocalStudent => {
@@ -214,16 +540,26 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
       ? localStudents.filter(s => s.status === 'picked').length
       : localStudents.filter(s => s.status === 'dropped').length;
 
+    // Get unique stops from students
+    const stops = tripMode === 'pickup'
+      ? localStudents.map(s => s.pickup).filter(Boolean)
+      : localStudents.map(s => s.dropoff).filter(Boolean);
+    const uniqueStops = Array.from(new Set(stops));
+
     return {
-      totalStops: 8,
+      totalStops: uniqueStops.length || localStudents.length,
       completedStops: completedCount,
-      currentStop: 'Đang cập nhật...',
-      nextStop: 'Đang cập nhật...',
-      estimatedTime: '15 phút',
-      routeName: currentSchedule?.tuyen?.ten_tuyen || driverData.route,
+      currentStop: tripMode === 'pickup' 
+        ? localStudents.find(s => s.status === 'waiting')?.pickup || 'Đang di chuyển'
+        : localStudents.find(s => s.status === 'picked')?.dropoff || 'Đang di chuyển',
+      nextStop: tripMode === 'pickup'
+        ? localStudents.find(s => s.status === 'waiting')?.pickup || 'Hoàn thành'
+        : localStudents.find(s => s.status === 'picked')?.dropoff || 'Hoàn thành',
+      estimatedTime: completedCount < localStudents.length ? '15 phút' : '0 phút',
+      routeName: scheduleWithPhanCong?.tuyen?.ten_tuyen || scheduleWithPhanCong?.tuyen_duong || driverData.route || 'Chưa có tuyến',
       totalStudents: localStudents.length
     };
-  }, [localStudents, tripMode, currentSchedule, driverData.route]);
+  }, [localStudents, tripMode, scheduleWithPhanCong, driverData.route]);
 
   // ==================== HANDLERS ====================
   const handleStudentStatus = async (
@@ -250,8 +586,8 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
       await pickupDropoffService.updateLogStatus(log.ma_nhat_ky, updateData);
 
       // Refresh logs after update
-      if (currentSchedule?.ma_lich) {
-        const response = await pickupDropoffService.getLogsBySchedule(currentSchedule.ma_lich);
+      if (scheduleWithPhanCong?.ma_lich) {
+        const response = await pickupDropoffService.getLogsBySchedule(scheduleWithPhanCong.ma_lich);
         if (response.success && response.data) {
           setPickupDropoffLogs(response.data);
         }
@@ -452,17 +788,9 @@ const DriverDashboard = ({ driverData }: DriverDashboardProps) => {
               </span>
             </div>
             
-            {/* Map Placeholder */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg h-48 flex items-center justify-center mb-4 border border-blue-200">
-              <div className="text-center">
-                <MapPin className="h-12 w-12 text-blue-500 mx-auto mb-2" />
-                <p className="text-gray-700 font-medium">Bản đồ GPS</p>
-                {busLocation && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Lat: {busLocation.latitude.toFixed(4)}, Lng: {busLocation.longitude.toFixed(4)}
-                  </p>
-                )}
-              </div>
+            {/* Map */}
+            <div className="mb-4">
+              <MapViews height="400px" />
             </div>
           </div>
 

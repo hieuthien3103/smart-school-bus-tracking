@@ -1,10 +1,10 @@
 import { useMemo, useEffect } from 'react';
-import { 
-  BarChart3, 
-  Users, 
-  Bus, 
-  MapPin, 
-  Bell, 
+import {
+  BarChart3,
+  Users,
+  Bus,
+  MapPin,
+  Bell,
   Calendar,
   Activity,
   AlertTriangle,
@@ -39,21 +39,21 @@ const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps
   const { students } = useStudents();
   const { notifications } = useNotifications();
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
-  const error = null;  
-  
+  const error = null;
+
   // Calculate real-time stats from actual data with useMemo for proper re-rendering
- const dashboardStats = useMemo(() => ({
-  totalBuses: buses.length,
-  activeBuses: buses.filter(bus => bus.trang_thai === 'dang_su_dung').length,
-  maintenanceBuses: buses.filter(bus => bus.trang_thai === 'bao_duong').length,
-  readyBuses: buses.filter(bus => bus.trang_thai === 'san_sang').length,
-  totalStudents: students.length,
-  totalDrivers: drivers.length,
-  totalRoutes: schedules.length,
-  activeRoutes: schedules.filter(s => s.trang_thai_lich === 'dang_chay').length,
-  completedRoutes: schedules.filter(s => s.trang_thai_lich === 'hoan_thanh').length,
-  totalAlerts: safeNotifications.length
-}), [buses, schedules, drivers, students, safeNotifications]);
+  const dashboardStats = useMemo(() => ({
+    totalBuses: buses.length,
+    activeBuses: buses.filter(bus => bus.trang_thai === 'dang_su_dung').length,
+    maintenanceBuses: buses.filter(bus => bus.trang_thai === 'bao_duong').length,
+    readyBuses: buses.filter(bus => bus.trang_thai === 'san_sang').length,
+    totalStudents: students.length,
+    totalDrivers: drivers.length,
+    totalRoutes: schedules.length,
+    activeRoutes: schedules.filter(s => s.trang_thai_lich === 'dang_chay').length,
+    completedRoutes: schedules.filter(s => s.trang_thai_lich === 'hoan_thanh').length,
+    totalAlerts: safeNotifications.length
+  }), [buses, schedules, drivers, students, safeNotifications]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -111,23 +111,23 @@ const AdminDashboard = ({ adminData, onNavigate, onAddNew }: AdminDashboardProps
     };
   }, [onNavigate, onAddNew]);
 
-const recentActivities = safeNotifications.map((n) => ({
-  id: n.ma_tb,
-  type: n.ma_tai_xe ? 'driver' : 'alert',
-  message: n.noi_dung,
-  time: new Date(n.thoi_gian).toLocaleString('vi-VN'),
-  status: 'info'
-}));
-
-const activeAlerts = safeNotifications
-  .filter(n => n.noi_dung?.toLowerCase().includes('sự cố') || n.noi_dung?.toLowerCase().includes('chậm'))
-  .map((n) => ({
+  const recentActivities = safeNotifications.map((n) => ({
     id: n.ma_tb,
-    type: 'alert',
-    message: n.noi_dung || '',
-    severity: n.noi_dung?.includes('sự cố') ? 'high' : 'medium',
-    route: n.ma_tai_xe ? `Tài xế ${n.ma_tai_xe}` : 'Không xác định'
+    type: n.ma_tai_xe ? 'driver' : 'alert',
+    message: n.noi_dung,
+    time: new Date(n.thoi_gian).toLocaleString('vi-VN'),
+    status: 'info'
   }));
+
+  const activeAlerts = safeNotifications
+    .filter(n => n.noi_dung?.toLowerCase().includes('sự cố') || n.noi_dung?.toLowerCase().includes('chậm'))
+    .map((n) => ({
+      id: n.ma_tb,
+      type: 'alert',
+      message: n.noi_dung || '',
+      severity: n.noi_dung?.includes('sự cố') ? 'high' : 'medium',
+      route: n.ma_tai_xe ? `Tài xế ${n.ma_tai_xe}` : 'Không xác định'
+    }));
 
   // Real-time stats are now calculated directly from context data
 
@@ -167,7 +167,7 @@ const activeAlerts = safeNotifications
           Dashboard Quản trị - {adminData.name}
         </h1>
         <p className="text-gray-600">Tổng quan hệ thống Smart School Bus</p>
-        
+
         {/* Data Source Indicator */}
         {error && (
           <div className="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
@@ -244,7 +244,6 @@ const activeAlerts = safeNotifications
           </div>
         </div>
       </div>
-
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* System Overview */}
         <div className="xl:col-span-2 space-y-6">
@@ -254,7 +253,7 @@ const activeAlerts = safeNotifications
               <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
               Cảnh báo Hệ thống
             </h2>
-            
+
             <div className="space-y-3">
               {activeAlerts.map((alert) => (
                 <div key={alert.id} className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)}`}>
@@ -278,7 +277,7 @@ const activeAlerts = safeNotifications
               <Clock className="h-5 w-5 text-blue-600 mr-2" />
               Hoạt động Gần đây
             </h2>
-            
+
             <div className="space-y-3">
               {recentActivities.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
@@ -300,9 +299,9 @@ const activeAlerts = safeNotifications
           {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Thao tác Nhanh</h2>
-            
+
             <div className="space-y-3">
-              <button 
+              <button
                 onClick={() => onNavigate?.('buses')}
                 className="w-full p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-left flex items-center justify-between"
                 title="Phím tắt: Ctrl+B"
@@ -313,8 +312,8 @@ const activeAlerts = safeNotifications
                 </div>
                 <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Ctrl+B</span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => onNavigate?.('students')}
                 className="w-full p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-left flex items-center justify-between"
                 title="Phím tắt: Ctrl+S"
@@ -325,8 +324,8 @@ const activeAlerts = safeNotifications
                 </div>
                 <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Ctrl+S</span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => onNavigate?.('tracking')}
                 className="w-full p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-left flex items-center justify-between"
                 title="Phím tắt: Ctrl+Y"
@@ -337,8 +336,8 @@ const activeAlerts = safeNotifications
                 </div>
                 <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">Ctrl+Y</span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => onNavigate?.('drivers')}
                 className="w-full p-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-left flex items-center justify-between"
                 title="Phím tắt: Ctrl+D"
@@ -350,7 +349,7 @@ const activeAlerts = safeNotifications
                 <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">Ctrl+D</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => onNavigate?.('schedule')}
                 className="w-full p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-left flex items-center justify-between"
                 title="Phím tắt: Ctrl+L"
@@ -361,8 +360,8 @@ const activeAlerts = safeNotifications
                 </div>
                 <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">Ctrl+L</span>
               </button>
-              
-              <button 
+
+              <button
                 onClick={() => onNavigate?.('reports')}
                 className="w-full p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-left flex items-center justify-between"
                 title="Phím tắt: Ctrl+R"
@@ -373,15 +372,15 @@ const activeAlerts = safeNotifications
                 </div>
                 <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded">Ctrl+R</span>
               </button>
-              
+
               {/* Divider */}
               <div className="border-t border-gray-200 my-3"></div>
-              
+
               {/* Quick Add Actions */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Thêm mới nhanh</p>
-                
-                <button 
+
+                <button
                   onClick={() => onAddNew?.('student')}
                   className="w-full p-2.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-left flex items-center justify-between text-sm"
                   title="Phím tắt: Ctrl+1"
@@ -392,8 +391,8 @@ const activeAlerts = safeNotifications
                   </div>
                   <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Ctrl+1</span>
                 </button>
-                
-                <button 
+
+                <button
                   onClick={() => onAddNew?.('driver')}
                   className="w-full p-2.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-left flex items-center justify-between text-sm"
                   title="Phím tắt: Ctrl+2"
@@ -404,8 +403,8 @@ const activeAlerts = safeNotifications
                   </div>
                   <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Ctrl+2</span>
                 </button>
-                
-                <button 
+
+                <button
                   onClick={() => onAddNew?.('bus')}
                   className="w-full p-2.5 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-left flex items-center justify-between text-sm"
                   title="Phím tắt: Ctrl+3"
@@ -416,8 +415,8 @@ const activeAlerts = safeNotifications
                   </div>
                   <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">Ctrl+3</span>
                 </button>
-                
-                <button 
+
+                <button
                   onClick={() => onAddNew?.('schedule')}
                   className="w-full p-2.5 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-left flex items-center justify-between text-sm"
                   title="Phím tắt: Ctrl+4"
@@ -435,7 +434,7 @@ const activeAlerts = safeNotifications
           {/* System Status */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Trạng thái Hệ thống</h2>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Tài xế hoạt động</span>
@@ -444,14 +443,14 @@ const activeAlerts = safeNotifications
                     {dashboardStats.activeBuses}/{dashboardStats.totalDrivers}
                   </span>
                   <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-green-600 h-2 rounded-full"
                       style={{ width: `${(dashboardStats.activeBuses / dashboardStats.totalDrivers) * 100}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Tuyến đường hoạt động</span>
                 <div className="flex items-center">
@@ -459,14 +458,14 @@ const activeAlerts = safeNotifications
                     {dashboardStats.activeRoutes}/{dashboardStats.totalRoutes}
                   </span>
                   <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-blue-600 h-2 rounded-full"
                       style={{ width: `${dashboardStats.totalRoutes > 0 ? (dashboardStats.activeRoutes / dashboardStats.totalRoutes) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Hệ thống</span>
                 <div className="flex items-center">

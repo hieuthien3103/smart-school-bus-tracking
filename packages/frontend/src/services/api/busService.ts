@@ -51,9 +51,28 @@ const busService = {
 
   // Get bus location history / latest positions for a bus
   async getBusLocation(ma_xe: number): Promise<BusLocation[]> {
-    const res = await apiClient.get(`/vitrixe`, { params: { ma_xe } });
-    const payload = res.data as any;
-    return Array.isArray(payload) ? payload : (payload?.data ?? []);
+    try {
+      // Try new endpoint first
+      const res = await apiClient.get(`/bus-locations/${ma_xe}/history`, { params: { limit: 1 } });
+      const payload = res.data as any;
+      if (payload?.data && Array.isArray(payload.data)) {
+        return payload.data;
+      }
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+    } catch (error) {
+      // Fallback to old endpoint
+      try {
+        const res = await apiClient.get(`/vitrixe`, { params: { ma_xe } });
+        const payload = res.data as any;
+        return Array.isArray(payload) ? payload : (payload?.data ?? []);
+      } catch (fallbackError) {
+        console.error('Error fetching bus location:', fallbackError);
+        return [];
+      }
+    }
+    return [];
   },
 
   // If backend provides tracking data endpoint (optional)
