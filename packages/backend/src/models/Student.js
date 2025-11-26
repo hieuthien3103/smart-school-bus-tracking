@@ -9,11 +9,8 @@ class Student {
         hs.ho_ten,
         hs.lop,
         hs.trang_thai,
-<<<<<<< HEAD
         hs.ma_diem_don,
         hs.ma_diem_tra,
-=======
->>>>>>> a00a86b85727eebe641474e9b77a5f155a756b65
         hs.ma_phu_huynh,
         ph.ho_ten AS ten_phu_huynh,
         ph.so_dien_thoai AS sdt_phu_huynh,
