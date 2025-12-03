@@ -14,7 +14,6 @@ class Driver {
             t.mat_khau,
             t.ma_ql,
             t.trang_thai,
-            t.kinh_nghiem,     -- thêm cột kinh nghiệm
             t.kinh_nghiem,     -- 🆕 thêm cột kinh nghiệm
             
             xb.bien_so AS xe_hien_tai, 
