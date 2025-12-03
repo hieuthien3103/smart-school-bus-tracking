@@ -274,8 +274,8 @@ const StudentManagement: React.FC = () => {
                         </td>
                         <td className="px-4 py-2">
                           <div className="text-sm">
-                            <div>Đón: {s.tram_don || '-'}</div> 
-                            <div>Trả: {s.tram_tra || '-'}</div>
+                          <div>Đón: {s.tram_don && s.dia_chi_don ? `${s.tram_don} (${s.dia_chi_don})` : (s.tram_don || s.dia_chi_don || '-')}</div> 
+                          <div>Trả: {s.tram_tra && s.dia_chi_tra ? `${s.tram_tra} (${s.dia_chi_tra})` : (s.tram_tra || s.dia_chi_tra || '-')}</div>
                           </div>
                         </td>
                         <td className="px-4 py-2">
