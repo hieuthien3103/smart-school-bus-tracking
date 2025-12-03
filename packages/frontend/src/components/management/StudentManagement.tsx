@@ -69,7 +69,7 @@ const StudentManagement: React.FC = () => {
       ma_phu_huynh: s.ma_phu_huynh != null ? String(s.ma_phu_huynh) : '',
       ma_diem_don: s.ma_diem_don != null ? String(s.ma_diem_don) : '',
       ma_diem_tra: s.ma_diem_tra != null ? String(s.ma_diem_tra) : '',
-      trang_thai: s.trang_thai ?? 'hoat_dong',
+      trang_thai: s.trang_thai ?? 'dang_hoc',
     });
     setShowModal(true);
   };
@@ -109,7 +109,7 @@ const StudentManagement: React.FC = () => {
         ma_phu_huynh: Number(data.ma_phu_huynh),
         ma_diem_don: Number(data.ma_diem_don),
         ma_diem_tra: Number(data.ma_diem_tra),
-        trang_thai: data.trang_thai ?? 'hoat_dong',
+        trang_thai: data.trang_thai ?? 'dang_hoc',
       };
 
       if (editingStudent && (editingStudent.ma_hs ?? editingStudent.id)) {
@@ -194,13 +194,13 @@ const StudentManagement: React.FC = () => {
         type: 'select' as const, 
         placeholder: 'Chọn trạng thái',
         options: [
-          { value: 'hoat_dong', label: '✅ Hoạt động' }, 
+          { value: 'dang_hoc', label: '✅ Đang học' }, 
           { value: 'nghi_hoc', label: '⏸️ Nghỉ học' },
           { value: 'chuyen_truong', label: '🔄 Chuyển trường' },
           { value: 'tot_nghiep', label: '🎓 Tốt nghiệp' }
         ], 
         required: true,
-        defaultValue: editingStudent?.trang_thai ?? 'hoat_dong'
+        defaultValue: editingStudent?.trang_thai ?? 'dang_hoc'
       },
     ];
   }, [editingStudent, parentsOptions, stopsOptions]);
@@ -284,13 +284,13 @@ const StudentManagement: React.FC = () => {
                         </td>
                         <td className="px-4 py-2">
                           <span className={`px-2 py-1 text-xs rounded font-medium ${
-                            s.trang_thai === 'hoat_dong' ? 'bg-green-100 text-green-800' : 
+                            s.trang_thai === 'dang_hoc' ? 'bg-green-100 text-green-800' : 
                             s.trang_thai === 'nghi_hoc' ? 'bg-yellow-100 text-yellow-800' : 
                             s.trang_thai === 'chuyen_truong' ? 'bg-blue-100 text-blue-800' : 
                             s.trang_thai === 'tot_nghiep' ? 'bg-purple-100 text-purple-800' : 
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {s.trang_thai === 'hoat_dong' ? '✅ Hoạt động' : 
+                            {s.trang_thai === 'dang_hoc' ? '✅ Đang học' : 
                              s.trang_thai === 'nghi_hoc' ? '⏸️ Nghỉ học' : 
                              s.trang_thai === 'chuyen_truong' ? '🔄 Chuyển trường' : 
                              s.trang_thai === 'tot_nghiep' ? '🎓 Tốt nghiệp' : 
