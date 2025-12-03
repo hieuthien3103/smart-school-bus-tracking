@@ -273,14 +273,10 @@ const StudentManagement: React.FC = () => {
                           )}
                         </td>
                         <td className="px-4 py-2">
-                          {stopDon || stopTra ? (
-                            <div className="text-sm">
-                              <div>Đón: {stopDon?.ten_tram ?? '-'}</div>
-                              <div>Trả: {stopTra?.ten_tram ?? '-'}</div>
-                            </div>
-                          ) : (
-                            '-'
-                          )}
+                          <div className="text-sm">
+                            <div>Đón: {s.tram_don || '-'}</div> 
+                            <div>Trả: {s.tram_tra || '-'}</div>
+                          </div>
                         </td>
                         <td className="px-4 py-2">
                           <span className={`px-2 py-1 text-xs rounded font-medium ${
