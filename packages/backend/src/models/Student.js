@@ -17,6 +17,8 @@ class Student {
         hs.ma_diem_don,
         hs.ma_diem_tra,
         td.ten_tram AS tram_don,
+        td.dia_chi AS dia_chi_don,
+        tt.dia_chi AS dia_chi_tra,
         tt.ten_tram AS tram_tra
       FROM hocsinh hs
       LEFT JOIN phuhuynh ph ON hs.ma_phu_huynh = ph.ma_phu_huynh
